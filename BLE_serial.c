@@ -6,6 +6,7 @@
  */
 
 #include "BLE_serial.h"
+#include "driverlib/uart.h"
 
 void BLE_serialTask(void *pvParameters)
 {
@@ -14,7 +15,7 @@ void BLE_serialTask(void *pvParameters)
     {
         xEventGroupWaitBits(Serials, BLE_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         int i=0;
-        while(UARTCharAvail(UART1_BASE))
+        while(UARTCharsAvail(UART1_BASE))
         {
             str[i]=UARTCharGet(UART1_BASE);
             i++;

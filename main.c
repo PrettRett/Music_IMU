@@ -8,11 +8,13 @@
 #include "list.h"
 #include "event_groups.h"
 #include "portmacro.h"
+#include "task.h"
+#include "FreeRTOSconfig.h"
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "inc/hw_ints.h"
-#include "task.h"
 #include "stdbool.h"
+#include "stdint.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/rom.h"
@@ -21,14 +23,11 @@
 #include "driverlib/uart.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/timer.h"
-#include "FreeRTOSconfig.h"
 #include "BLE_serial.h"
 
-EventGroupHandle_t Serials;
 
-int main(void)
+void main()
 {
-
 
 
     //
