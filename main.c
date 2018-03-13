@@ -26,8 +26,6 @@
 
 EventGroupHandle_t Serials;
 
-
-
 int main(void)
 {
 
@@ -57,6 +55,7 @@ int main(void)
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
+    UARTEnable(UART0_BASE);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
     //Esta funcion habilita la interrupcion de la UART y le da la prioridad adecuada si esta activado el soporte para FreeRTOS
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART0);   //La UART tiene que seguir funcionando aunque el micro esta dormido
@@ -71,6 +70,7 @@ int main(void)
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
     GPIOPinConfigure(GPIO_PB0_U1RX);
     GPIOPinConfigure(GPIO_PB1_U1TX);
+    UARTEnable(UART1_BASE);
     GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART1);   //La UART tiene que seguir funcionando aunque el micro esta dormido;
@@ -78,6 +78,7 @@ int main(void)
     UARTConfigSetExpClk(UART1_BASE,SysCtlClockGet(),115200,
                        UART_CONFIG_WLEN_8|UART_CONFIG_STOP_ONE|
                        UART_CONFIG_PAR_NONE);
+
 
 
     //Inicializa el puerto F (LEDs) como GPIO

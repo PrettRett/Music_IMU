@@ -7,7 +7,7 @@
 #ifndef FREERTOS_CONFIG_H
 #define FREERTOS_CONFIG_H
 
-#include "FreeRTOS.h"
+//#include "FreeRTOS.h"
 
 #define configUSE_PREEMPTION                    1   //Set to 1 to use the preemptive RTOS scheduler, or 0 to use the cooperative RTOS scheduler.
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION 0   //Some FreeRTOS ports have two methods of selecting the next task to execute - a generic method, and a method that is specific to that port.
