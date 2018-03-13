@@ -82,11 +82,13 @@
 #define INCLUDE_xTaskGetIdleTaskHandle          0
 #define INCLUDE_eTaskGetState                   0
 #define INCLUDE_xEventGroupSetBitFromISR        1
-#define INCLUDE_xTimerPendFunctionCall          0
+#define INCLUDE_xTimerPendFunctionCall          1
 #define INCLUDE_xTaskAbortDelay                 0
 #define INCLUDE_xTaskGetHandle                  0
 #define INCLUDE_xTaskResumeFromISR              1
 
 /* A header file that defines trace macro can be included here. */
+/* Define configASSERT() to disable interrupts and sit in a loop. */
+//#define configASSERT( (x)  )     if( ( x ) == 0 ) { taskDISABLE_INTERRUPTS(); while(1); }
 
 #endif /* FREERTOS_CONFIG_H */

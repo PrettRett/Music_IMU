@@ -26,6 +26,7 @@
 #include "BLE_serial.h"
 
 
+
 void main()
 {
 
@@ -54,7 +55,6 @@ void main()
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
-    UARTEnable(UART0_BASE);
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
     //Esta funcion habilita la interrupcion de la UART y le da la prioridad adecuada si esta activado el soporte para FreeRTOS
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART0);   //La UART tiene que seguir funcionando aunque el micro esta dormido
@@ -69,7 +69,6 @@ void main()
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
     GPIOPinConfigure(GPIO_PB0_U1RX);
     GPIOPinConfigure(GPIO_PB1_U1TX);
-    UARTEnable(UART1_BASE);
     GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART1);   //La UART tiene que seguir funcionando aunque el micro esta dormido;
@@ -77,18 +76,15 @@ void main()
     UARTConfigSetExpClk(UART1_BASE,SysCtlClockGet(),115200,
                        UART_CONFIG_WLEN_8|UART_CONFIG_STOP_ONE|
                        UART_CONFIG_PAR_NONE);
+    UARTIntClear(UART1_BASE, UART_INT_RT);
+    //UARTIntEnable(UART1_BASE, UART_INT_RT);
 
-
-
-    //Inicializa el puerto F (LEDs) como GPIO
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
-    GPIOPinWrite(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3, 0); //LEDS APAGADOS
-
+    IntMasterDisable();
     //Event_groups para avisar a las funciones de los serial
     Serials=xEventGroupCreate();
 
-
+    if(xTaskCreate(BLE_serialTask, "BLE_serial", 128, 0, tskIDLE_PRIORITY+1, 0)!=pdPASS)
+        while(1);
 
     vTaskStartScheduler();
     while(1);

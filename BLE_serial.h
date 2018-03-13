@@ -11,6 +11,7 @@
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "list.h"
+#include "timers.h"
 #include "event_groups.h"
 #include "portmacro.h"
 #include "task.h"
@@ -35,7 +36,7 @@ EventGroupHandle_t Serials;
 
 void BLE_serialTask(void *pvParameters);
 
-void UART0IntHandler();
+void UART1IntHandler();
 
 
 #endif /* BLE_SERIAL_H_ */

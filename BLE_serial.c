@@ -6,6 +6,8 @@
  */
 
 #include "BLE_serial.h"
+#include "timers.h"
+#include "event_groups.h"
 #include "driverlib/uart.h"
 
 void BLE_serialTask(void *pvParameters)
@@ -35,7 +37,7 @@ void BLE_serialTask(void *pvParameters)
     }
 }
 
-void UART0IntHandler()
+void UART1IntHandler()
 {
     if(UARTIntStatus(UART0_BASE,UART_INT_RX)!=UART_INT_RX)
         while(1);
