@@ -25,7 +25,30 @@
 #include "driverlib/timer.h"
 #include "BLE_serial.h"
 
+void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
+{
+    while(1);
+}
 
+void vApplicationTickHook( void )
+{
+    while(1);
+}
+
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
+{
+    while(1);
+}
+
+void vApplicationMallocFailedHook( void )
+{
+    while(1);
+}
+
+void vApplicationIdleHook( void )
+{
+    while(1);
+}
 
 void main()
 {

@@ -14,7 +14,7 @@
 #define configUSE_TICKLESS_IDLE                 0   //Set configUSE_TICKLESS_IDLE to 1 to use the low power tickless mode, or 0 to keep the tick interrupt running at all times. Low power tickless implementations are not provided for all FreeRTOS ports.
 #define configCPU_CLOCK_HZ                      ( (unsigned long) 40000000 )    //Set to the number of Hz the CPU is using for the application
 #define configTICK_RATE_HZ                      ( ( TickType_t ) 1000 )     //The frequency of the RTOS tick interrupt.
-#define configMAX_PRIORITIES                    5       //The number of priorities available to the application tasks. Any number of tasks can share the same priority. Co-routines are prioritised separately - see configMAX_CO_ROUTINE_PRIORITIES.
+#define configMAX_PRIORITIES                    16       //The number of priorities available to the application tasks. Any number of tasks can share the same priority. Co-routines are prioritised separately - see configMAX_CO_ROUTINE_PRIORITIES.
 #define configMINIMAL_STACK_SIZE                ( ( unsigned short ) 128 )     //The size of the stack used by the idle task. Generally this should not be reduced from the value set in the FreeRTOSConfig.h file provided with the demo application for the port you are using.
 #define configMAX_TASK_NAME_LEN                 16      //The maximum permissible length of the descriptive name given to a task when the task is created. The length is specified in the number of characters including the NULL termination byte.
 #define configUSE_16_BIT_TICKS                  0       //Time is measured in 'ticks' - which is the number of times the tick interrupt has executed since the RTOS kernel was started. The tick count is held in a variable of type TickType_t.
@@ -38,10 +38,10 @@
 #define configAPPLICATION_ALLOCATED_HEAP        0
 
 /* Hook function related definitions. */
-#define configUSE_IDLE_HOOK                     0
-#define configUSE_TICK_HOOK                     0
-#define configCHECK_FOR_STACK_OVERFLOW          0
-#define configUSE_MALLOC_FAILED_HOOK            0
+#define configUSE_IDLE_HOOK                     1
+#define configUSE_TICK_HOOK                     1
+#define configCHECK_FOR_STACK_OVERFLOW          (2)
+#define configUSE_MALLOC_FAILED_HOOK            1
 #define configUSE_DAEMON_TASK_STARTUP_HOOK      0
 
 /* Run time and task stats gathering related definitions. */
@@ -55,13 +55,13 @@
 
 /* Software timer related definitions. */
 #define configUSE_TIMERS                        1
-#define configTIMER_TASK_PRIORITY               3
-#define configTIMER_QUEUE_LENGTH                10
-#define configTIMER_TASK_STACK_DEPTH            configMINIMAL_STACK_SIZE
+#define configTIMER_TASK_PRIORITY               2
+#define configTIMER_QUEUE_LENGTH                32
+#define configTIMER_TASK_STACK_DEPTH            configMINIMAL_STACK_SIZE*2
 
 /* Interrupt nesting behaviour configuration. */
 #define configKERNEL_INTERRUPT_PRIORITY         ( 7 << 5 )
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY    ( 4 << 5 )
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY    ( 5 << 5 )
 #define configMAX_API_CALL_INTERRUPT_PRIORITY   ( 4 << 5 )
 
 
