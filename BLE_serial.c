@@ -118,7 +118,7 @@ void UARTBLEinit()
 
 void UART1IntHandler()
 {
-    volatile int aux;
+    uint32_t aux;
     if( (aux=UARTIntStatus(UART0_BASE,pdTRUE))&(UART_INT_RX|UART_INT_RT))
         while(1);
     BaseType_t xHigherPriorityTaskWoken, xResult;
@@ -131,13 +131,13 @@ void UART1IntHandler()
     {
         portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
     }
-    UARTIntClear(UART0_BASE,UART_INT_RX);
+    UARTIntClear(UART0_BASE,aux);
 }
 
 #ifdef USB_CONN
 void UART0IntHandler()
 {
-    volatile int aux;
+    uint32_t aux;
     if( (aux=UARTIntStatus(UART0_BASE,pdTRUE))&(UART_INT_RX|UART_INT_RT))
     {
         BaseType_t xHigherPriorityTaskWoken, xResult;
@@ -156,6 +156,6 @@ void UART0IntHandler()
 #else
 void UART0IntHandler()
 {
-    UARTIntClear(UART0_BASE,UART_INT_RX);
+    UARTIntClear(UART0_BASE,(UARTIntStatus(UART0_BASE,pdTRUE)));
 }
 #endif
