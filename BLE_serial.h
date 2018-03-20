@@ -29,14 +29,22 @@
 #include "driverlib/uart.h"
 #include "driverlib/interrupt.h"
 
+#define USB_CONN
+
 //funcion de freeRTOS
 #define BLE_FLAG 0x01
+#ifdef USB_CONN
+    #define USB_FLAG 0x02
+#else
+    #define USB_FLAG 0x00
+#endif
 
 EventGroupHandle_t Serials;
 
 void BLE_serialTask(void *pvParameters);
+void UARTBLEinit();
 
 void UART1IntHandler();
-
+void UART0IntHandler();
 
 #endif /* BLE_SERIAL_H_ */

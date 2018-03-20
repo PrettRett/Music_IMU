@@ -30,10 +30,6 @@ void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
     while(1);
 }
 
-void vApplicationTickHook( void )
-{
-    while(1);
-}
 
 void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer, StackType_t **ppxIdleTaskStackBuffer, uint32_t *pulIdleTaskStackSize )
 {
@@ -47,7 +43,7 @@ void vApplicationMallocFailedHook( void )
 
 void vApplicationIdleHook( void )
 {
-    while(1);
+    SysCtlSleep();
 }
 
 void main()
@@ -74,35 +70,9 @@ void main()
     //se usa para mandar y recibir mensajes y comandos por el puerto serie
     // Mediante un programa terminal como gtkterm, putty, cutecom, etc...
     //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-    GPIOPinConfigure(GPIO_PA0_U0RX);
-    GPIOPinConfigure(GPIO_PA1_U0TX);
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-    //Esta funcion habilita la interrupcion de la UART y le da la prioridad adecuada si esta activado el soporte para FreeRTOS
-    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART0);   //La UART tiene que seguir funcionando aunque el micro esta dormido
-    UARTClockSourceSet(UART0_BASE,UART_CLOCK_SYSTEM);
-    UARTConfigSetExpClk(UART0_BASE,SysCtlClockGet(),9600,
-                       UART_CONFIG_WLEN_8|UART_CONFIG_STOP_ONE|
-                       UART_CONFIG_PAR_NONE);
+    UARTBLEinit();
 
-
-    //Inicializar UART1 --------------------------------
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
-    GPIOPinConfigure(GPIO_PB0_U1RX);
-    GPIOPinConfigure(GPIO_PB1_U1TX);
-    GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-
-    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART1);   //La UART tiene que seguir funcionando aunque el micro esta dormido;
-    UARTClockSourceSet(UART1_BASE,UART_CLOCK_SYSTEM);
-    UARTConfigSetExpClk(UART1_BASE,SysCtlClockGet(),115200,
-                       UART_CONFIG_WLEN_8|UART_CONFIG_STOP_ONE|
-                       UART_CONFIG_PAR_NONE);
-    UARTIntClear(UART1_BASE, UART_INT_RT);
-    //UARTIntEnable(UART1_BASE, UART_INT_RT);
-
-    IntMasterDisable();
+    IntMasterEnable();
     //Event_groups para avisar a las funciones de los serial
     Serials=xEventGroupCreate();
 
