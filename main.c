@@ -73,8 +73,6 @@ void main()
     UARTBLEinit();
 
     IntMasterEnable();
-    //Event_groups para avisar a las funciones de los serial
-    Serials=xEventGroupCreate();
 
     if(xTaskCreate(BLE_serialTask, "BLE_serial", 128, 0, tskIDLE_PRIORITY+1, 0)!=pdPASS)
         while(1);

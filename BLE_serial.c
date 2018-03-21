@@ -27,6 +27,7 @@ void BLE_serialTask(void *pvParameters)
                 if(i>=32)
                     break;
             }
+            UARTIntEnable(UART1_BASE, UART_INT_RX|UART_INT_RT);
             int d;
             for(d=0; d<i; d++)
             {
@@ -47,6 +48,7 @@ void BLE_serialTask(void *pvParameters)
                 if(i>=32)
                     break;
             }
+            UARTIntEnable(UART0_BASE, UART_INT_RX|UART_INT_RT);
             int d;
             for(d=0; d<i; d++)
             {
@@ -64,6 +66,13 @@ void BLE_serialTask(void *pvParameters)
 
 void UARTBLEinit()
 {
+
+    //Event_groups para avisar a las funciones de los serial
+    Serials=xEventGroupCreate();
+
+    /*Rx1Queue=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
+    Rx0Queue=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);*/
+
     //
     // Inicializa la UARTy la configura a 115.200 bps, 8-N-1 .
     //se usa para mandar y recibir mensajes y comandos por el puerto serie
@@ -87,8 +96,9 @@ void UARTBLEinit()
 
     UARTFIFOLevelSet(UART0_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
 
-    UARTIntClear(UART0_BASE, UART_INT_RT);
-    UARTIntEnable(UART0_BASE, UART_INT_RT);
+    UARTIntClear(UART0_BASE, UART_INT_RX|UART_INT_RT);
+    UARTIntEnable(UART0_BASE, UART_INT_RX|UART_INT_RT);
+    UARTFIFOEnable(UART0_BASE);
     IntEnable(INT_UART0);
     UARTEnable(UART0_BASE);
 #endif
@@ -109,8 +119,9 @@ void UARTBLEinit()
 
     UARTFIFOLevelSet(UART1_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
 
-    UARTIntClear(UART1_BASE, UART_INT_RT);
-    UARTIntEnable(UART1_BASE, UART_INT_RT);
+    UARTIntClear(UART1_BASE, UART_INT_RX|UART_INT_RT);
+    UARTIntEnable(UART1_BASE, UART_INT_RX|UART_INT_RT);
+    UARTFIFOEnable(UART1_BASE);
     IntEnable(INT_UART1);
     UARTEnable(UART1_BASE);
 }
@@ -119,19 +130,19 @@ void UARTBLEinit()
 void UART1IntHandler()
 {
     uint32_t aux;
-    if( (aux=UARTIntStatus(UART0_BASE,pdTRUE))&(UART_INT_RX|UART_INT_RT))
-        while(1);
-    BaseType_t xHigherPriorityTaskWoken, xResult;
-    xHigherPriorityTaskWoken=pdFALSE;
-    xResult = xEventGroupSetBitsFromISR(
+    if( (aux=UARTIntStatus(UART1_BASE,pdTRUE))&(UART_INT_RX|UART_INT_RT))
+    {
+        BaseType_t xHigherPriorityTaskWoken, xResult;
+        xHigherPriorityTaskWoken=pdFALSE;
+        xResult = xEventGroupSetBitsFromISR(
                                   Serials,   /* The event group being updated. */
                                   BLE_FLAG, /* The bits being set. */
                                   &xHigherPriorityTaskWoken );
-    if(xResult != pdFAIL)
-    {
-        portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+        if(xResult != pdFAIL)
+            portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+        UARTIntDisable(UART1_BASE, UART_INT_RX|UART_INT_RT);
     }
-    UARTIntClear(UART0_BASE,aux);
+    UARTIntClear(UART1_BASE,aux);
 }
 
 #ifdef USB_CONN
@@ -150,6 +161,7 @@ void UART0IntHandler()
         {
             portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
         }
+        UARTIntDisable(UART0_BASE, UART_INT_RX|UART_INT_RT);
     }
     UARTIntClear(UART0_BASE,aux);
 }
