@@ -34,7 +34,7 @@ void BLE_serialTask(void *pvParameters)
                 if(!UARTCharPutNonBlocking(UART0_BASE, str[d]))
                 {
                     while(!UARTSpaceAvail(UART0_BASE));
-                    UARTCharPut(UART0_BASE,(unsigned char) 'E');
+                    UARTCharPut(UART0_BASE,str[d]);
                     break;
                 }
             }
@@ -55,7 +55,7 @@ void BLE_serialTask(void *pvParameters)
                 if(!UARTCharPutNonBlocking(UART1_BASE, str[d]))
                 {
                     while(!UARTSpaceAvail(UART1_BASE));
-                    UARTCharPut(UART1_BASE,(unsigned char) 'E');
+                    UARTCharPut(UART1_BASE,str[d]);
                     break;
                 }
             }
