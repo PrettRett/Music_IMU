@@ -8,6 +8,26 @@
 #ifndef BNO055_H_
 #define BNO055_H_
 
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "list.h"
+#include "timers.h"
+#include "event_groups.h"
+#include "portmacro.h"
+#include "task.h"
+#include "FreeRTOSconfig.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_types.h"
+#include "inc/hw_ints.h"
+#include "stdbool.h"
+#include "stdint.h"
+#include "driverlib/gpio.h"
+#include "driverlib/pin_map.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/sysctl.h"
+#include "driverlib/i2c.h"
+#include "driverlib/interrupt.h"
 
 #define NUM_BNO055_OFFSET_REGISTERS (22)
 
@@ -245,5 +265,9 @@ typedef struct
       VECTOR_GRAVITY       = BNO055_GRAVITY_DATA_X_LSB_ADDR
     } adafruit_vector_type_t;
 
+#define BNO_ADDRESS 0x28
+
+    void BNO_COMM(void *pvParameters);
+    void BNO_init();
 
 #endif /* BNO055_H_ */
