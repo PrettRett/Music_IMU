@@ -25,6 +25,8 @@
 #include "driverlib/timer.h"
 #include "BLE_serial.h"
 
+EventGroupHandle_t Serials;
+
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 {
     while(1);
@@ -71,11 +73,13 @@ void main()
     // Mediante un programa terminal como gtkterm, putty, cutecom, etc...
     //
     UARTBLEinit();
-
+    BNO_init();
     IntMasterEnable();
 
     if(xTaskCreate(BLE_serialTask, "BLE_serial", 128, 0, tskIDLE_PRIORITY+1, 0)!=pdPASS)
         while(1);
+    if(xTaskCreate(BNO_COMM, "BNO_i2c_COMM", 256, 0, tskIDLE_PRIORITY+1, 0)!=pdPASS)
+            while(1);
 
     vTaskStartScheduler();
     while(1);

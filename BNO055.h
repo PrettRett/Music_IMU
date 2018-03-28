@@ -31,6 +31,34 @@
 
 #define NUM_BNO055_OFFSET_REGISTERS (22)
 
+#define BNO_ADDRESS 0x28
+#define ACK_FLAG 0x04
+#define NACK_FLAG 0X08
+#define STOP_FLAG 0x10
+#define DATA_FLAG 0x20
+
+uint8_t  g_CurrState;
+uint8_t  g_PrevState;
+uint8_t  g_I2CDirection;
+uint8_t  g_I2CRepeatedStart;
+uint8_t  g_ui8MasterTxData[1];
+uint8_t  g_ui8MasterRxData[2];
+uint8_t  g_ui8MasterBytes       = 0;
+uint8_t  g_ui8MasterBytesLength = 1;
+
+extern EventGroupHandle_t Serials;
+
+enum I2C_MASTER_STATE
+{
+    I2C_OP_IDLE = 0,
+    I2C_OP_TXADDR,
+    I2C_OP_TXDATA,
+    I2C_OP_RXDATA,
+    I2C_OP_STOP,
+    I2C_ERR_STATE
+};
+
+
 typedef struct
 {
     int16_t accel_offset_x;
@@ -265,7 +293,6 @@ typedef struct
       VECTOR_GRAVITY       = BNO055_GRAVITY_DATA_X_LSB_ADDR
     } adafruit_vector_type_t;
 
-#define BNO_ADDRESS 0x28
 
     void BNO_COMM(void *pvParameters);
     void BNO_init();

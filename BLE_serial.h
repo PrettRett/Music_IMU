@@ -41,7 +41,7 @@
     #define USB_FLAG 0x00
 #endif
 
-EventGroupHandle_t Serials;
+extern EventGroupHandle_t Serials;
 
 //QueueHandle_t Rx0Queue, Rx0Queue;
 
