@@ -50,12 +50,12 @@ extern EventGroupHandle_t Serials;
 
 enum I2C_MASTER_STATE
 {
-    I2C_OP_IDLE = 0,
-    I2C_OP_TXADDR,
-    I2C_OP_TXDATA,
-    I2C_OP_RXDATA,
-    I2C_OP_STOP,
-    I2C_ERR_STATE
+    BNO_INIT,
+    BNO_CONF,
+    BNO_RDY,
+    BNO_READ,
+    BNO_CALIB,
+    ERROR
 };
 
 
@@ -293,7 +293,7 @@ typedef struct
       VECTOR_GRAVITY       = BNO055_GRAVITY_DATA_X_LSB_ADDR
     } adafruit_vector_type_t;
 
-
+    adafruit_bno055_opmode_t mode=OPERATION_MODE_CONFIG;
     void BNO_COMM(void *pvParameters);
     void BNO_init();
 

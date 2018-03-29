@@ -14,7 +14,7 @@ void BNO_COMM(void *pvParameters)
         EventBits_t aux=xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         switch (g_CurrState)
         {
-            case I2C_OP_IDLE:
+            case BNO_INIT:
                 g_PrevState = g_CurrState;
                 g_CurrState = I2C_OP_TXADDR;
 
@@ -23,7 +23,7 @@ void BNO_COMM(void *pvParameters)
             break;
 
 
-            case I2C_OP_TXADDR:
+            case BNO_CONF:
                 g_PrevState = g_CurrState;
 
             /* If Address has been NAK'ed then go to stop state */
@@ -47,7 +47,7 @@ void BNO_COMM(void *pvParameters)
             break;
 
 
-            case I2C_OP_TXDATA:
+            case BNO_RDY:
                 g_PrevState = g_CurrState;
 
 
@@ -80,7 +80,7 @@ void BNO_COMM(void *pvParameters)
             break;
 
 
-            case I2C_OP_RXDATA:
+            case BNO_READ:
                 g_PrevState = g_CurrState;
 
                 /*
@@ -154,7 +154,7 @@ void BNO_COMM(void *pvParameters)
 
 
 
-            case I2C_OP_STOP:
+            case BNO_CALIB:
                 /*
                  Move the current state to the previous state
                  Else continue with the transmission till last byte
@@ -164,7 +164,7 @@ void BNO_COMM(void *pvParameters)
                 break;
 
 
-            case I2C_ERR_STATE:
+            case ERROR:
                 g_CurrState = I2C_ERR_STATE;
                 break;
 
