@@ -9,6 +9,7 @@
 
 void BNO_COMM(void *pvParameters)
 {
+    int
     while(1)
     {
         EventBits_t aux=xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -16,9 +17,16 @@ void BNO_COMM(void *pvParameters)
         {
             case BNO_INIT:
                 g_PrevState = g_CurrState;
-                g_CurrState = I2C_OP_TXADDR;
+                g_CurrState = BNO_CONF;
 
-                I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+                int dir=0;
+                while(BNO_ReadRegister(BNO055_CHIP_ID_ADDR,dir,1)<1);
+                if(dir==0xA0)
+                {
+
+                }
+                else
+                    g_CurrState = ERROR;
 
             break;
 
@@ -191,17 +199,54 @@ void BNO_init()
     I2CMasterIntEnableEx(I2C0_BASE , I2C_MASTER_INT_STOP | I2C_MASTER_INT_NACK
                          | I2C_MASTER_INT_DATA);
     IntEnable(INT_I2C0);
-    g_CurrState=I2C_OP_IDLE;
+    g_CurrState=BNO_INIT;
 }
 
 uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
 {
-
+    I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+    I2CMasterDataPut(I2C0_BASE, reg8bits);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+    do
+    {
+        I2CMasterDataPut(I2C0_BASE, dataWriting);
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
+    }
+    while(!((xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_FLAG|DATA_FLAG)));
+    return pdTRUE;
 }
 
-uint8_t BNO_ReadRegister(uint8_t reg8bits)
+int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t bytesToRead)
 {
+    uint8_t count=0;
+    do
+    {
+        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+        I2CMasterDataPut(I2C0_BASE, reg8bits);
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    }
+    while(!((xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_FLAG|DATA_FLAG)));
 
+    do
+    {
+        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdTRUE);
+        if(bytesToRead>1)
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
+        else
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
+    }
+    while(!((xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_FLAG|DATA_FLAG)));
+
+    for(count=0,count<bytesToRead,count++)
+    {
+        bytesReadBuff[count]=I2CMasterDataGet(I2C0_BASE);
+        if((count+1)<bytesToRead)
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+        if(xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY)&(STOP_FLAG|NACK_FLAG))
+            return -1;
+    }
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    return count;
 }
 
 
