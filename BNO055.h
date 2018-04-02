@@ -37,14 +37,13 @@
 #define STOP_FLAG 0x10
 #define DATA_FLAG 0x20
 
+#define ACC_PARAM  0b00 /* Range +-2G */| (0b100 << 2)/* Bandwith 125Hz*/) | (0b00 << 5 /* Normal operation mode */)
+#define MAG_PARAM  0b011 /* Output Rate 10Hz */| (0b01 << 3)/* Operation Mode Regular*/) | (0b00 << 5 /* Normal Power Mode */)
+#define GYR_PARAM_0  0x001 /* Range 1000 dps */| (0x010 << 3)/* Bandwith 116Hz*/)
+#define GYR_PARAM_1  (0x000 /* Operation Mode Normal */)
+
 uint8_t  g_CurrState;
 uint8_t  g_PrevState;
-uint8_t  g_I2CDirection;
-uint8_t  g_I2CRepeatedStart;
-uint8_t  g_ui8MasterTxData[1];
-uint8_t  g_ui8MasterRxData[2];
-uint8_t  g_ui8MasterBytes       = 0;
-uint8_t  g_ui8MasterBytesLength = 1;
 
 extern EventGroupHandle_t Serials;
 
@@ -249,6 +248,34 @@ typedef struct
       OPERATION_MODE_NDOF_FMC_OFF                             = 0X0B,
       OPERATION_MODE_NDOF                                     = 0X0C
     } adafruit_bno055_opmode_t;
+
+    typedef enum
+    {
+        ACC_Config                                            =0x08,
+        MAG_Config                                            =0x09,
+        GYR_Config_0                                          =0x0A,
+        GYR_Config_1                                          =0x0B,
+        ACC_Sleep_Config                                      =0x0C,
+        GYR_Sleep_Config                                      =0x0D,
+        INT_MSK                                               =0x0F,
+        INT_EN                                                =0x10,
+        ACC_AM_THRES                                          =0x11,
+        ACC_INT_Settings                                      =0x12,
+        ACC_HG_DURATION                                       =0x13,
+        ACC_HG_THRES                                          =0x14,
+        ACC_NM_THRE                                           =0x15,
+        ACC_AM_SET                                            =0x16,
+        GYR_INT_SETING                                        =0x17,
+        GYR_HR_X_SET                                          =0x18,
+        GYR_DUR_X                                             =0x19,
+        GYR_HR_Y_SET                                          =0x1A,
+        GYR_DUR_Y                                             =0x1B,
+        GYR_HR_Z_SET                                          =0x1C,
+        GYR_DUR_Z                                             =0x1D,
+        GYR_AM_THRES                                          =0x1E,
+        GYR_AM_SET                                            =0x1F,
+        UNIQUE_ID                                             =0x50,
+    } adafruit_bno055_reg_PAGE_1
 
     typedef enum
     {

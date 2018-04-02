@@ -12,18 +12,28 @@ void BNO_COMM(void *pvParameters)
     int
     while(1)
     {
-        EventBits_t aux=xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+        //posiblemente no haga falta usar la linea de abajo comentada
+        //EventBits_t aux=xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         switch (g_CurrState)
         {
             case BNO_INIT:
                 g_PrevState = g_CurrState;
                 g_CurrState = BNO_CONF;
 
-                int dir=0;
-                while(BNO_ReadRegister(BNO055_CHIP_ID_ADDR,dir,1)<1);
+                int reg=0;
+                vTaskDelay(configTICK_RATE_HZ*0.4);
+                while(BNO_ReadRegister(BNO055_CHIP_ID_ADDR,&reg,1)<1);
                 if(dir==0xA0)
                 {
-
+                    BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR,0x20);//hacemos un reset al modulo
+                    vTaskDelay(configTICK_RATE_HZ*0.7);
+                    do
+                    {
+                        BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
+                    }
+                    while(reg!=0x00);
+                    BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
+                    mode=OPERATION_MODE_CONFIG;
                 }
                 else
                     g_CurrState = ERROR;
@@ -33,152 +43,100 @@ void BNO_COMM(void *pvParameters)
 
             case BNO_CONF:
                 g_PrevState = g_CurrState;
+                g_CurrState = BNO_RDY;
 
-            /* If Address has been NAK'ed then go to stop state */
-                if(aux & I2C_MASTER_INT_NACK)
+                int reg=0;
+                if(mode!=OPERATION_MODE_CONFIG)
                 {
-                    g_CurrState = I2C_OP_STOP;
-                }
-            /* Based on the direction move to the appropriate state of Transmit or Receive */
-                else if(!g_I2CDirection)
-                {
-                    g_CurrState = I2C_OP_TXDATA;
-                }
-                else
-                {
-                    g_CurrState = I2C_OP_RXDATA;
+                    BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
+                    mode=OPERATION_MODE_CONFIG;
+                    vTaskDelay(configTICK_RATE_HZ*0.1);
                 }
 
-                I2CMasterDataPut(I2C0_BASE, (0x00));
-                I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
+                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
+                BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR, 0x80);
+                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x01);
+                vTaskDelay(configTICK_RATE_HZ*0.05);
+                BNO_WriteRegister(ACC_Config,ACC_PARAM);
+                if(BNO_ReadRegister(ACC_Config,&reg,1)<0)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+                if(reg!=ACC_PARAM)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+
+                BNO_WriteRegister(MAG_Config,MAG_PARAM);
+                if(BNO_ReadRegister(MAG_Config,&reg,1)<0)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+                if(reg!=MAG_PARAM)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+
+                BNO_WriteRegister(GYR_Config_0, GYR_PARAM_0);
+                if(BNO_ReadRegister(GYR_Config_0,&reg,1)<0)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+                if(reg!=GYR_PARAM_0)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+
+                BNO_WriteRegister(GYR_Config_1, GYR_PARAM_0);
+                if(BNO_ReadRegister(GYR_Config_1,&reg,1)<0)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+                if(reg!=GYR_PARAM_1)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+
+                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
+                vTaskDelay(configTICK_RATE_HZ*0.05);
+
+                BNO_WriteRegister(BNO055_UNIT_SEL_ADDR, ((0x0) /* m/s^2 */ | ( 0x1 << 1 )/* Radians per second */
+                                                         | (0x1 << 2)/* Vector de euler en radianes */ | (0x0 << 4 )/* grados centígrados para el sensor de temp */));
 
             break;
 
 
             case BNO_RDY:
-                g_PrevState = g_CurrState;
-
-
-            /* If Address or Data has been NAK'ed then go to stop state
-               If a Stop condition is seen due to number of bytes getting
-               done then move to STOP state
-            */
-                if(aux & I2C_MASTER_INT_NACK)
-                {
-                    g_CurrState = I2C_OP_STOP;
-                }
-                else if(aux & I2C_MASTER_INT_STOP)       /* query: what is purpose */
-                {
-                    g_CurrState = I2C_OP_STOP;
-                }
-                else
-                {
-                    I2CMasterDataPut(I2C0_BASE, g_ui8MasterTxData[g_ui8MasterBytes++]);
-                    if(g_ui8MasterBytes == g_ui8MasterBytesLength)
-                    {
-                        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-                    }
-                    else
-                    {
-                        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_CONT);
-                    }
-
-                }
 
             break;
 
 
             case BNO_READ:
-                g_PrevState = g_CurrState;
-
-                /*
-                 If Address has been NAK'ed then go to stop state
-                 If a Stop condition is seen due to number of bytes getting
-                 done then move to STOP state and read the last data byte
-                */
-                if(aux & I2C_MASTER_INT_NACK)
-                {
-                    g_CurrState = I2C_OP_STOP;
-                }
-                else if(aux & I2C_MASTER_INT_STOP)
-                {
-                    g_CurrState = I2C_OP_STOP;
-                    g_ui8MasterRxData[g_ui8MasterBytes++] = I2CMasterDataGet(0x7d);
-                }
-                else
-                {
-                    /*
-                     If end then NAK the byte and put Stop. Else continue
-                     with ACK of the current byte and receive the next byte
-                    */
-                    if(g_I2CRepeatedStart)
-                    {
-                        /*
-                         Send the Slave Address with RnW as Receive. If only byte is
-                         to be received then send START and STOP else send START
-                        */
-                        I2CMasterSlaveAddrSet(I2C0_BASE, 0x7d, pdTRUE);
-                        if(g_ui8MasterBytesLength == 1)
-                        {
-                            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
-                        }
-                        else
-                        {
-                            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-                        }
-
-                        /*
-                         Change the Repeated Start Flag to false as the condition
-                         is now to receive data
-                        */
-                        g_I2CRepeatedStart = 0;
-                    }
-                    else if(g_ui8MasterBytes == (g_ui8MasterBytesLength - 2))
-                    {
-                        /*
-                         Read the byte from I2C Buffer and decrement the number
-                         of bytes counter to see if end has been reached or not
-                        */
-                        g_ui8MasterRxData[g_ui8MasterBytes++] = I2CMasterDataGet(I2C0_BASE);
-
-                        /*
-                         Put a STOP Condition on the bus
-                        */
-                        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-                    }
-                    else
-                    {
-                        /*
-                         Read the byte from I2C Buffer and decrement the number
-                         of bytes counter to see if end has been reached or not
-                        */
-                        g_ui8MasterRxData[g_ui8MasterBytes++] = I2CMasterDataGet(I2C0_BASE);
-
-                        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
-                    }
-                }
-
                 break;
 
 
 
             case BNO_CALIB:
-                /*
-                 Move the current state to the previous state
-                 Else continue with the transmission till last byte
-                */
                 g_PrevState = g_CurrState;
 
                 break;
 
 
             case ERROR:
-                g_CurrState = I2C_ERR_STATE;
+                g_CurrState = ERROR;
                 break;
 
 
             default:
-                g_CurrState = I2C_ERR_STATE;
+                g_CurrState = ERROR;
                 break;
 
         }
@@ -199,6 +157,7 @@ void BNO_init()
     I2CMasterIntEnableEx(I2C0_BASE , I2C_MASTER_INT_STOP | I2C_MASTER_INT_NACK
                          | I2C_MASTER_INT_DATA);
     IntEnable(INT_I2C0);
+    I2CMasterEnable(I2C0_BASE);
     g_CurrState=BNO_INIT;
 }
 
