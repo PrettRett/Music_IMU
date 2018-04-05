@@ -7,9 +7,60 @@
 
 #include "BNO055.h"
 
+uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
+{
+    I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+    I2CMasterDataPut(I2C0_BASE, reg8bits);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+    do
+    {
+        I2CMasterDataPut(I2C0_BASE, dataWriting);
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
+    }
+    while(!((xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+    return pdTRUE;
+}
+
+int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t bytesToRead)
+{
+    uint8_t count=0;
+    do
+    {
+        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+        I2CMasterDataPut(I2C0_BASE, firstRegToRead);
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    }
+    while(!((xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+
+    do
+    {
+        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdTRUE);
+        if(bytesToRead>1)
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
+        else
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
+    }
+    while(!((xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+
+    for(count=0;count<bytesToRead;count++)
+    {
+        bytesReadBuff[count]=(0xFF&I2CMasterDataGet(I2C0_BASE));
+        if((count+1)<bytesToRead)
+        {
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+            if(xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY)&(STOP_FLAG|NACK_FLAG))
+                return -1;
+        }
+        else
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    }
+    return count;
+}
+
 void BNO_COMM(void *pvParameters)
 {
-    int
+
+    uint8_t reg=0;
     while(1)
     {
         //posiblemente no haga falta usar la linea de abajo comentada
@@ -20,10 +71,9 @@ void BNO_COMM(void *pvParameters)
                 g_PrevState = g_CurrState;
                 g_CurrState = BNO_CONF;
 
-                int reg=0;
                 vTaskDelay(configTICK_RATE_HZ*0.4);
                 while(BNO_ReadRegister(BNO055_CHIP_ID_ADDR,&reg,1)<1);
-                if(dir==0xA0)
+                if(reg==0xA0)
                 {
                     BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR,0x20);//hacemos un reset al modulo
                     vTaskDelay(configTICK_RATE_HZ*0.7);
@@ -33,7 +83,7 @@ void BNO_COMM(void *pvParameters)
                     }
                     while(reg!=0x00);
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
-                    mode=OPERATION_MODE_CONFIG;
+                    mode_BNO=OPERATION_MODE_CONFIG;
                 }
                 else
                     g_CurrState = ERROR;
@@ -45,11 +95,10 @@ void BNO_COMM(void *pvParameters)
                 g_PrevState = g_CurrState;
                 g_CurrState = BNO_RDY;
 
-                int reg=0;
-                if(mode!=OPERATION_MODE_CONFIG)
+                if(mode_BNO!=OPERATION_MODE_CONFIG)
                 {
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
-                    mode=OPERATION_MODE_CONFIG;
+                    mode_BNO=OPERATION_MODE_CONFIG;
                     vTaskDelay(configTICK_RATE_HZ*0.1);
                 }
 
@@ -108,8 +157,7 @@ void BNO_COMM(void *pvParameters)
                 BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
                 vTaskDelay(configTICK_RATE_HZ*0.05);
 
-                BNO_WriteRegister(BNO055_UNIT_SEL_ADDR, ((0x0) /* m/s^2 */ | ( 0x1 << 1 )/* Radians per second */
-                                                         | (0x1 << 2)/* Vector de euler en radianes */ | (0x0 << 4 )/* grados centígrados para el sensor de temp */));
+                BNO_WriteRegister(BNO055_UNIT_SEL_ADDR, UNIT_PARAM );
 
             break;
 
@@ -150,62 +198,16 @@ void BNO_init()
     I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), pdTRUE);
     GPIOPinConfigure(GPIO_PB2_I2C0SCL);
     GPIOPinConfigure(GPIO_PB3_I2C0SDA);
-    GPIOPinTypeI2C(GPIO_PORTB_BASE,GPIO_PIN_2);
-    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE,GPIO_PIN_3);
+    GPIOPinTypeI2C(GPIO_PORTB_BASE,GPIO_PIN_3);
+    GPIOPinTypeI2CSCL(GPIO_PORTB_BASE,GPIO_PIN_2);
     I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), pdTRUE);
-    I2CMasterIntClear(I2C0_BASE,pdTRUE);
+    I2CMasterIntClear(I2C0_BASE);
+    I2CMasterIntEnable(I2C0_BASE);
     I2CMasterIntEnableEx(I2C0_BASE , I2C_MASTER_INT_STOP | I2C_MASTER_INT_NACK
                          | I2C_MASTER_INT_DATA);
     IntEnable(INT_I2C0);
     I2CMasterEnable(I2C0_BASE);
     g_CurrState=BNO_INIT;
-}
-
-uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
-{
-    I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
-    I2CMasterDataPut(I2C0_BASE, reg8bits);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-    do
-    {
-        I2CMasterDataPut(I2C0_BASE, dataWriting);
-        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-    }
-    while(!((xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_FLAG|DATA_FLAG)));
-    return pdTRUE;
-}
-
-int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t bytesToRead)
-{
-    uint8_t count=0;
-    do
-    {
-        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
-        I2CMasterDataPut(I2C0_BASE, reg8bits);
-        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-    }
-    while(!((xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_FLAG|DATA_FLAG)));
-
-    do
-    {
-        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdTRUE);
-        if(bytesToRead>1)
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-        else
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
-    }
-    while(!((xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_FLAG|DATA_FLAG)));
-
-    for(count=0,count<bytesToRead,count++)
-    {
-        bytesReadBuff[count]=I2CMasterDataGet(I2C0_BASE);
-        if((count+1)<bytesToRead)
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
-        if(xEventGroupWaitBits(Serials, ACK_FLAG|NACK_FLAG|STOP_FLAG|DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY)&(STOP_FLAG|NACK_FLAG))
-            return -1;
-    }
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
-    return count;
 }
 
 
@@ -216,8 +218,13 @@ void BNO_IntHandler()
     uint32_t I2CMasterInterruptStatus;
 
     I2CMasterInterruptStatus = I2CMasterIntStatusEx(I2C0_BASE, pdTRUE);
+    I2CMasterIntClearEx(I2C0_BASE, I2CMasterInterruptStatus);
     BaseType_t xHigherPriorityTaskWoken, xResult;
     xHigherPriorityTaskWoken=pdFALSE;
+    if(I2CMasterInterruptStatus&I2C_MASTER_INT_DATA)
+        I2CMasterInterruptStatus=ACK_DATA_FLAG;
+    else
+        I2CMasterInterruptStatus>>=2;
     xResult = xEventGroupSetBitsFromISR(
                               Serials,   /* The event group being updated. */
                               I2CMasterInterruptStatus, /* The bits being set. */
@@ -226,7 +233,6 @@ void BNO_IntHandler()
     {
         portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
     }
-    I2CMasterIntClearEx(I2C0_BASE, I2CMasterInterruptStatus);
 
 
 }

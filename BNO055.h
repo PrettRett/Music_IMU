@@ -31,23 +31,19 @@
 
 #define NUM_BNO055_OFFSET_REGISTERS (22)
 
-#define BNO_ADDRESS 0x28
-#define ACK_FLAG 0x04
-#define NACK_FLAG 0X08
+#define BNO_ADDRESS 0x29
+#define NACK_FLAG 0X04
 #define STOP_FLAG 0x10
-#define DATA_FLAG 0x20
+#define ACK_DATA_FLAG 0x08
 
-#define ACC_PARAM  0b00 /* Range +-2G */| (0b100 << 2)/* Bandwith 125Hz*/) | (0b00 << 5 /* Normal operation mode */)
-#define MAG_PARAM  0b011 /* Output Rate 10Hz */| (0b01 << 3)/* Operation Mode Regular*/) | (0b00 << 5 /* Normal Power Mode */)
-#define GYR_PARAM_0  0x001 /* Range 1000 dps */| (0x010 << 3)/* Bandwith 116Hz*/)
-#define GYR_PARAM_1  (0x000 /* Operation Mode Normal */)
+#define ACC_PARAM  0b0010000//(0b00|(0b100<<2))|(0b00<<5)) /* Range +-2G *//* Bandwith 125Hz*//* Normal operation mode */
+#define MAG_PARAM  0b0001011//(0b011|(0b01<<3))|(0b00<<5)) /* Output Rate 10Hz *//* Operation Mode Regular*//* Normal Power Mode */
+#define GYR_PARAM_0  0b010001//(0x001|(0x010<<3))) /* Range 1000 dps *//* Bandwith 116Hz*/
+#define GYR_PARAM_1  0b00000000//(0x000) /* Operation Mode Normal */
+#define UNIT_PARAM   0b00000110//((0x0)|(0x1<<1)|(0x1<<2)|(0x0<<4)) /* m/s^2 *//* Radians per second *//* Vector de euler en radianes *//* grados centígrados para el sensor de temp */
 
-uint8_t  g_CurrState;
-uint8_t  g_PrevState;
 
-extern EventGroupHandle_t Serials;
-
-enum I2C_MASTER_STATE
+typedef enum
 {
     BNO_INIT,
     BNO_CONF,
@@ -55,7 +51,12 @@ enum I2C_MASTER_STATE
     BNO_READ,
     BNO_CALIB,
     ERROR
-};
+} I2C_MASTER_STATE;
+
+I2C_MASTER_STATE  g_CurrState;
+I2C_MASTER_STATE  g_PrevState;
+
+extern EventGroupHandle_t Serials;
 
 
 typedef struct
@@ -275,7 +276,7 @@ typedef struct
         GYR_AM_THRES                                          =0x1E,
         GYR_AM_SET                                            =0x1F,
         UNIQUE_ID                                             =0x50,
-    } adafruit_bno055_reg_PAGE_1
+    } adafruit_bno055_reg_PAGE_1;
 
     typedef enum
     {
@@ -320,7 +321,7 @@ typedef struct
       VECTOR_GRAVITY       = BNO055_GRAVITY_DATA_X_LSB_ADDR
     } adafruit_vector_type_t;
 
-    adafruit_bno055_opmode_t mode=OPERATION_MODE_CONFIG;
+    uint8_t mode_BNO;
     void BNO_COMM(void *pvParameters);
     void BNO_init();
 

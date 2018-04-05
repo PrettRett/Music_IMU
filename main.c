@@ -24,6 +24,7 @@
 #include "driverlib/interrupt.h"
 #include "driverlib/timer.h"
 #include "BLE_serial.h"
+#include "BNO055.h"
 
 EventGroupHandle_t Serials;
 
