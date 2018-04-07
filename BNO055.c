@@ -17,7 +17,7 @@ uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
         I2CMasterDataPut(I2C0_BASE, dataWriting);
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
     }
-    while(!((xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
     return pdTRUE;
 }
 
@@ -30,7 +30,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
         I2CMasterDataPut(I2C0_BASE, firstRegToRead);
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
     }
-    while(!((xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
 
     do
     {
@@ -40,7 +40,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
         else
             I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
     }
-    while(!((xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
 
     for(count=0;count<bytesToRead;count++)
     {
@@ -48,7 +48,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
         if((count+1)<bytesToRead)
         {
             I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
-            if(xEventGroupWaitBits(Serials, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY)&(STOP_FLAG|NACK_FLAG))
+            if(xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY)&(STOP_FLAG|NACK_FLAG))
                 return -1;
         }
         else
@@ -164,10 +164,21 @@ void BNO_COMM(void *pvParameters)
 
             case BNO_RDY:
 
+                /* Código para pasar a modo lectura */
+
+                /* Código para pasar a modo configurar */
+
+                /* Código para calibrar */
+
             break;
 
 
             case BNO_READ:
+
+                /* Código para leer los registros necesarios */
+
+                /* Código para parar la lectura y pasar a modo RDY */
+
                 break;
 
 

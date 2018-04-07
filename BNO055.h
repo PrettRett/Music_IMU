@@ -56,7 +56,7 @@ typedef enum
 I2C_MASTER_STATE  g_CurrState;
 I2C_MASTER_STATE  g_PrevState;
 
-extern EventGroupHandle_t Serials;
+extern EventGroupHandle_t Signals;
 
 
 typedef struct

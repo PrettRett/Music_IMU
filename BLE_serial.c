@@ -15,7 +15,7 @@ void BLE_serialTask(void *pvParameters)
     char str[32];
     while(1)
     {
-        EventBits_t aux=xEventGroupWaitBits(Serials, BLE_FLAG|USB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+        EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         int i=0;
 #ifdef USB_CONN
         if((aux & BLE_FLAG)==BLE_FLAG)
@@ -68,7 +68,7 @@ void UARTBLEinit()
 {
 
     //Event_groups para avisar a las funciones de los serial
-    Serials=xEventGroupCreate();
+    Signals=xEventGroupCreate();
 
     /*Rx1Queue=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
     Rx0Queue=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);*/
