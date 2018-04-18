@@ -26,7 +26,7 @@
 #include "BLE_serial.h"
 #include "BNO055.h"
 
-EventGroupHandle_t Serials;
+EventGroupHandle_t Signals;
 
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 {

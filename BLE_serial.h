@@ -30,20 +30,21 @@
 #include "driverlib/interrupt.h"
 
 #define USB_CONN
-#define QUEUE_LENGTH 12
+#define QUEUE_LENGTH 24
 #define QUEUE_SIZE sizeof(uint8_t)
 
 //funcion de freeRTOS
 #define BLE_FLAG 0x01
 #ifdef USB_CONN
     #define USB_FLAG 0x02
+    QueueHandle_t xRxedChars0, xCharsForTx0;
 #else
     #define USB_FLAG 0x00
 #endif
 
 extern EventGroupHandle_t Signals;
 
-//QueueHandle_t Rx0Queue, Rx0Queue;
+QueueHandle_t xRxedChars1, xCharsForTx1;
 
 void BLE_serialTask(void *pvParameters);
 void UARTBLEinit();

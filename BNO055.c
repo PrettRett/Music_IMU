@@ -10,8 +10,13 @@
 uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
 {
     I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
-    I2CMasterDataPut(I2C0_BASE, reg8bits);
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+    xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+    do
+    {
+        I2CMasterDataPut(I2C0_BASE, reg8bits);
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+    }
+    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
     do
     {
         I2CMasterDataPut(I2C0_BASE, dataWriting);
@@ -27,6 +32,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
     do
     {
         I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+        xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         I2CMasterDataPut(I2C0_BASE, firstRegToRead);
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
     }
@@ -72,7 +78,8 @@ void BNO_COMM(void *pvParameters)
                 g_CurrState = BNO_CONF;
 
                 vTaskDelay(configTICK_RATE_HZ*0.4);
-                while(BNO_ReadRegister(BNO055_CHIP_ID_ADDR,&reg,1)<1);
+                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
+                BNO_ReadRegister(BNO055_CHIP_ID_ADDR,&reg,1);
                 if(reg==0xA0)
                 {
                     BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR,0x20);//hacemos un reset al modulo
@@ -84,6 +91,9 @@ void BNO_COMM(void *pvParameters)
                     while(reg!=0x00);
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
                     mode_BNO=OPERATION_MODE_CONFIG;
+                    vTaskDelay(configTICK_RATE_HZ*0.02);
+                    BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
+                    BNO_WriteRegister(BNO055_PWR_MODE_ADDR,POWER_MODE_NORMAL);
                 }
                 else
                     g_CurrState = ERROR;
@@ -95,17 +105,29 @@ void BNO_COMM(void *pvParameters)
                 g_PrevState = g_CurrState;
                 g_CurrState = BNO_RDY;
 
+                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
+                BNO_ReadRegister(BNO055_PAGE_ID_ADDR,&reg,1);
                 if(mode_BNO!=OPERATION_MODE_CONFIG)
                 {
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
                     mode_BNO=OPERATION_MODE_CONFIG;
-                    vTaskDelay(configTICK_RATE_HZ*0.1);
+                    vTaskDelay(configTICK_RATE_HZ*0.2);
                 }
-
-                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
                 BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR, 0x80);
+                BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
+                vTaskDelay(configTICK_RATE_HZ*0.49);
+                mode_BNO=OPERATION_MODE_AMG;
+                BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_AMG);
+                BNO_ReadRegister(BNO055_OPR_MODE_ADDR,&reg,1);
+                vTaskDelay(configTICK_RATE_HZ*0.252);
                 BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x01);
-                vTaskDelay(configTICK_RATE_HZ*0.05);
+                BNO_ReadRegister(BNO055_PAGE_ID_ADDR,&reg,1);
+                if(reg!=0x01)
+                {
+                    g_CurrState=ERROR;
+                    break;
+                }
+                vTaskDelay(configTICK_RATE_HZ*0.3);
                 BNO_WriteRegister(ACC_Config,ACC_PARAM);
                 if(BNO_ReadRegister(ACC_Config,&reg,1)<0)
                 {
@@ -117,7 +139,7 @@ void BNO_COMM(void *pvParameters)
                     g_CurrState=ERROR;
                     break;
                 }
-
+                vTaskDelay(configTICK_RATE_HZ*0.3);
                 BNO_WriteRegister(MAG_Config,MAG_PARAM);
                 if(BNO_ReadRegister(MAG_Config,&reg,1)<0)
                 {
@@ -129,7 +151,7 @@ void BNO_COMM(void *pvParameters)
                     g_CurrState=ERROR;
                     break;
                 }
-
+                vTaskDelay(configTICK_RATE_HZ*0.3);
                 BNO_WriteRegister(GYR_Config_0, GYR_PARAM_0);
                 if(BNO_ReadRegister(GYR_Config_0,&reg,1)<0)
                 {
@@ -141,7 +163,7 @@ void BNO_COMM(void *pvParameters)
                     g_CurrState=ERROR;
                     break;
                 }
-
+                vTaskDelay(configTICK_RATE_HZ*0.3);
                 BNO_WriteRegister(GYR_Config_1, GYR_PARAM_0);
                 if(BNO_ReadRegister(GYR_Config_1,&reg,1)<0)
                 {
@@ -155,15 +177,17 @@ void BNO_COMM(void *pvParameters)
                 }
 
                 BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
-                vTaskDelay(configTICK_RATE_HZ*0.05);
+                vTaskDelay(configTICK_RATE_HZ*0.1);
 
+                BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
+                mode_BNO=OPERATION_MODE_CONFIG;
                 BNO_WriteRegister(BNO055_UNIT_SEL_ADDR, UNIT_PARAM );
 
             break;
 
 
             case BNO_RDY:
-
+                vTaskDelay(portMAX_DELAY);
                 /* Código para pasar a modo lectura */
 
                 /* Código para pasar a modo configurar */
@@ -190,6 +214,7 @@ void BNO_COMM(void *pvParameters)
 
 
             case ERROR:
+                vTaskDelay(portMAX_DELAY);
                 g_CurrState = ERROR;
                 break;
 
@@ -237,7 +262,7 @@ void BNO_IntHandler()
     else
         I2CMasterInterruptStatus>>=2;
     xResult = xEventGroupSetBitsFromISR(
-                              Serials,   /* The event group being updated. */
+                                Signals,   /* The event group being updated. */
                               I2CMasterInterruptStatus, /* The bits being set. */
                               &xHigherPriorityTaskWoken );
     if(xResult != pdFAIL)

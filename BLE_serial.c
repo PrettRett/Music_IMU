@@ -20,46 +20,43 @@ void BLE_serialTask(void *pvParameters)
 #ifdef USB_CONN
         if((aux & BLE_FLAG)==BLE_FLAG)
         {
-            while(UARTCharsAvail(UART1_BASE))
+            while(xQueueReceive(xRxedChars1,&str[i],0/*sin espera*/))
             {
-                str[i]=UARTCharGet(UART1_BASE);
                 i++;
                 if(i>=32)
                     break;
             }
-            UARTIntEnable(UART1_BASE, UART_INT_RX|UART_INT_RT);
-            int d;
-            for(d=0; d<i; d++)
+            int d=0;
+            while(UARTSpaceAvail(UART1_BASE))
             {
-                if(!UARTCharPutNonBlocking(UART0_BASE, str[d]))
-                {
-                    while(!UARTSpaceAvail(UART0_BASE));
-                    UARTCharPut(UART0_BASE,str[d]);
-                    break;
-                }
+                UARTCharPutNonBlocking(UART1_BASE,str[d]);
+                d++;
+            }
+            for(d=d; d<i; d++)
+            {
+                xQueueSend(xCharsForTx0, &str[d],0);
             }
         }
         if((aux & USB_FLAG)==USB_FLAG)
         {
-            while(UARTCharsAvail(UART0_BASE))
+            while(xQueueReceive(xRxedChars0,&str[i],0/*sin espera*/))
             {
-                str[i]=UARTCharGet(UART0_BASE);
                 i++;
                 if(i>=32)
                     break;
             }
-            UARTIntEnable(UART0_BASE, UART_INT_RX|UART_INT_RT);
-            int d;
-            for(d=0; d<i; d++)
+            int d=0;
+            while(UARTSpaceAvail(UART1_BASE))
             {
-                if(!UARTCharPutNonBlocking(UART1_BASE, str[d]))
-                {
-                    while(!UARTSpaceAvail(UART1_BASE));
-                    UARTCharPut(UART1_BASE,str[d]);
-                    break;
-                }
+                UARTCharPutNonBlocking(UART1_BASE,str[d]);
+                d++;
+            }
+            for(d=d; d<i; d++)
+            {
+                xQueueSend(xCharsForTx1, &str[d],0);
             }
         }
+
 #endif
     }
 }
@@ -70,8 +67,8 @@ void UARTBLEinit()
     //Event_groups para avisar a las funciones de los serial
     Signals=xEventGroupCreate();
 
-    /*Rx1Queue=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
-    Rx0Queue=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);*/
+    xCharsForTx1=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
+    xRxedChars1=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
 
     //
     // Inicializa la UARTy la configura a 115.200 bps, 8-N-1 .
@@ -80,6 +77,8 @@ void UARTBLEinit()
     //
 
 #ifdef USB_CONN
+    xRxedChars0=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
+    xCharsForTx0=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
     //---------------------UART0------------------------------------------
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
@@ -96,8 +95,8 @@ void UARTBLEinit()
 
     UARTFIFOLevelSet(UART0_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
 
-    UARTIntClear(UART0_BASE, UART_INT_RX|UART_INT_RT);
-    UARTIntEnable(UART0_BASE, UART_INT_RX|UART_INT_RT);
+    UARTIntClear(UART0_BASE, UART_INT_RX|UART_INT_RT|UART_INT_TX);
+    UARTIntEnable(UART0_BASE, UART_INT_RX|UART_INT_RT|UART_INT_TX);
     UARTFIFOEnable(UART0_BASE);
     IntEnable(INT_UART0);
     UARTEnable(UART0_BASE);
@@ -119,8 +118,8 @@ void UARTBLEinit()
 
     UARTFIFOLevelSet(UART1_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
 
-    UARTIntClear(UART1_BASE, UART_INT_RX|UART_INT_RT);
-    UARTIntEnable(UART1_BASE, UART_INT_RX|UART_INT_RT);
+    UARTIntClear(UART1_BASE, UART_INT_RX|UART_INT_RT|UART_INT_TX);
+    UARTIntEnable(UART1_BASE, UART_INT_RX|UART_INT_RT|UART_INT_TX);
     UARTFIFOEnable(UART1_BASE);
     IntEnable(INT_UART1);
     UARTEnable(UART1_BASE);
@@ -129,41 +128,141 @@ void UARTBLEinit()
 
 void UART1IntHandler()
 {
-    uint32_t aux;
-    if( (aux=UARTIntStatus(UART1_BASE,pdTRUE))&(UART_INT_RX|UART_INT_RT))
+    uint32_t ui32Ints;
+    int8_t cChar;
+    int32_t i32Char;
+    portBASE_TYPE xHigherPriorityTaskWoken=false;
+
+
+    //
+    // Get and clear the current interrupt source(s)
+    //
+    ui32Ints = MAP_UARTIntStatus(UART1_BASE, true);
+    MAP_UARTIntClear(UART1_BASE, ui32Ints);
+
+    //
+    // Are we being interrupted because the TX FIFO has space available?
+    //
+    if(ui32Ints & UART_INT_TX)
     {
-        BaseType_t xHigherPriorityTaskWoken, xResult;
-        xHigherPriorityTaskWoken=pdFALSE;
-        xResult = xEventGroupSetBitsFromISR(
-                                  Serials,   /* The event group being updated. */
-                                  BLE_FLAG, /* The bits being set. */
-                                  &xHigherPriorityTaskWoken );
-        if(xResult != pdFAIL)
-            portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-        UARTIntDisable(UART1_BASE, UART_INT_RX|UART_INT_RT);
+        //
+        // Move as many bytes as we can into the transmit FIFO.
+        //
+        while(MAP_UARTSpaceAvail(UART1_BASE) && !xQueueIsQueueEmptyFromISR(xCharsForTx1))
+        {
+            uint8_t data;
+            xQueueReceiveFromISR(xCharsForTx1,&data,&xHigherPriorityTaskWoken);
+            MAP_UARTCharPutNonBlocking(UART1_BASE,data);
+        }
+
+        //
+        // If the output buffer is empty, turn off the transmit interrupt.
+        //
+        if(xQueueIsQueueEmptyFromISR(xCharsForTx1))
+        {
+            MAP_UARTIntDisable(UART1_BASE, UART_INT_TX);
+        }
     }
-    UARTIntClear(UART1_BASE,aux);
+
+    //
+    // Are we being interrupted due to a received character?
+    //
+    if(ui32Ints & (UART_INT_RX | UART_INT_RT))
+    {
+        //
+        // Get all the available characters from the UART.
+        //
+        while(MAP_UARTCharsAvail(UART1_BASE))
+        {
+            //
+            // Read a character
+            //
+            i32Char = MAP_UARTCharGetNonBlocking(UART1_BASE);
+            cChar = (unsigned char)(i32Char & 0xFF);
+            xEventGroupSetBitsFromISR(Signals,   /* The event group being updated. */
+                                      BLE_FLAG, /* The bits being set. */
+                                      &xHigherPriorityTaskWoken );
+            //
+            // If there is space in the receive buffer, put the character
+            // there, otherwise throw it away.
+            //
+
+            xQueueSendFromISR(xRxedChars1,&cChar,&xHigherPriorityTaskWoken);
+        }
+    }
+
+    portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 
 #ifdef USB_CONN
 void UART0IntHandler()
 {
-    uint32_t aux;
-    if( (aux=UARTIntStatus(UART0_BASE,pdTRUE))&(UART_INT_RX|UART_INT_RT))
-    {
-        BaseType_t xHigherPriorityTaskWoken, xResult;
-        xHigherPriorityTaskWoken=pdFALSE;
-        xResult = xEventGroupSetBitsFromISR(
-                                  Serials,   /* The event group being updated. */
-                                  USB_FLAG, /* The bits being set. */
-                                  &xHigherPriorityTaskWoken );
-        if(xResult != pdFAIL)
+        uint32_t ui32Ints;
+        int8_t cChar;
+        int32_t i32Char;
+        portBASE_TYPE xHigherPriorityTaskWoken=false;
+
+
+        //
+        // Get and clear the current interrupt source(s)
+        //
+        ui32Ints = MAP_UARTIntStatus(UART0_BASE, true);
+        MAP_UARTIntClear(UART0_BASE, ui32Ints);
+
+        //
+        // Are we being interrupted because the TX FIFO has space available?
+        //
+        if(ui32Ints & UART_INT_TX)
         {
-            portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+            //
+            // Move as many bytes as we can into the transmit FIFO.
+            //
+            while(MAP_UARTSpaceAvail(UART0_BASE) && !xQueueIsQueueEmptyFromISR(xCharsForTx0))
+            {
+                uint8_t data;
+                xQueueReceiveFromISR(xCharsForTx0,&data,&xHigherPriorityTaskWoken);
+                MAP_UARTCharPutNonBlocking(UART0_BASE,data);
+            }
+
+            //
+            // If the output buffer is empty, turn off the transmit interrupt.
+            //
+            if(xQueueIsQueueEmptyFromISR(xCharsForTx0))
+            {
+                MAP_UARTIntDisable(UART0_BASE, UART_INT_TX);
+            }
         }
-        UARTIntDisable(UART0_BASE, UART_INT_RX|UART_INT_RT);
-    }
-    UARTIntClear(UART0_BASE,aux);
+
+        //
+        // Are we being interrupted due to a received character?
+        //
+        if(ui32Ints & (UART_INT_RX | UART_INT_RT))
+        {
+            //
+            // Get all the available characters from the UART.
+            //
+            while(MAP_UARTCharsAvail(UART0_BASE))
+            {
+                //
+                // Read a character
+                //
+                i32Char = MAP_UARTCharGetNonBlocking(UART0_BASE);
+                cChar = (unsigned char)(i32Char & 0xFF);
+                xEventGroupSetBitsFromISR(
+                                                Signals,   /* The event group being updated. */
+                                                USB_FLAG, /* The bits being set. */
+                                                &xHigherPriorityTaskWoken );
+
+                //
+                // If there is space in the receive buffer, put the character
+                // there, otherwise throw it away.
+                //
+
+                xQueueSendFromISR(xRxedChars0,&cChar,&xHigherPriorityTaskWoken);
+            }
+        }
+
+        portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 }
 #else
 void UART0IntHandler()
