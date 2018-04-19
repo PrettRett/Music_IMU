@@ -12,7 +12,7 @@
 
 void BLE_serialTask(void *pvParameters)
 {
-    char str[32];
+    unsigned char str[32];
     while(1)
     {
         EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -27,9 +27,9 @@ void BLE_serialTask(void *pvParameters)
                     break;
             }
             int d=0;
-            while(UARTSpaceAvail(UART1_BASE))
+            while((UARTSpaceAvail(UART0_BASE))&&(d<=i))
             {
-                UARTCharPutNonBlocking(UART1_BASE,str[d]);
+                UARTCharPutNonBlocking(UART0_BASE,str[d]);
                 d++;
             }
             for(d=d; d<i; d++)
@@ -46,7 +46,7 @@ void BLE_serialTask(void *pvParameters)
                     break;
             }
             int d=0;
-            while(UARTSpaceAvail(UART1_BASE))
+            while((UARTSpaceAvail(UART1_BASE))&&(d<=i))
             {
                 UARTCharPutNonBlocking(UART1_BASE,str[d]);
                 d++;
@@ -112,7 +112,7 @@ void UARTBLEinit()
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART1);   //La UART tiene que seguir funcionando aunque el micro esta dormido
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOB);
     UARTClockSourceSet(UART1_BASE,UART_CLOCK_SYSTEM);
-    UARTConfigSetExpClk(UART1_BASE,SysCtlClockGet(),115200,
+    UARTConfigSetExpClk(UART1_BASE,SysCtlClockGet(),9600,
                        UART_CONFIG_WLEN_8|UART_CONFIG_STOP_ONE|
                        UART_CONFIG_PAR_NONE);
 
@@ -123,6 +123,10 @@ void UARTBLEinit()
     UARTFIFOEnable(UART1_BASE);
     IntEnable(INT_UART1);
     UARTEnable(UART1_BASE);
+
+    //--------------------Habilitarel ENABLE del HM-10-------------------
+    GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE,GPIO_PIN_4);
+    GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
 }
 
 

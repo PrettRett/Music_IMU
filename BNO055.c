@@ -10,7 +10,6 @@
 uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
 {
     I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
-    xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
     do
     {
         I2CMasterDataPut(I2C0_BASE, reg8bits);
@@ -32,7 +31,6 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
     do
     {
         I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
-        xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         I2CMasterDataPut(I2C0_BASE, firstRegToRead);
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
     }
