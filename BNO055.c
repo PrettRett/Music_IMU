@@ -185,8 +185,16 @@ void BNO_COMM(void *pvParameters)
 
 
             case BNO_RDY:
+                g_PrevState = g_CurrState;
+                g_CurrState = BNO_READ;
+
+#ifdef USB_CONN //codigo de prueba pre-bluetooth
+                xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1);
+#else
                 vTaskDelay(portMAX_DELAY);
+#endif
                 /* Código para pasar a modo lectura */
+
 
                 /* Código para pasar a modo configurar */
 
@@ -196,10 +204,20 @@ void BNO_COMM(void *pvParameters)
 
 
             case BNO_READ:
+                g_PrevState = g_CurrState;
 
                 /* Código para leer los registros necesarios */
+                BNO_ReadRegister(MAG_OFFSET_X_LSB_ADDR,mult_read,18);
+                int i, s;
+                s=pdTRUE;
+                for(i=0; i<18; i++)
+                    s=s && xQueueSend(xCharsForTx0,&mult_read[i],0);
+                if(s!=pdTRUE)
+                    g_CurrState = ERROR;
 
                 /* Código para parar la lectura y pasar a modo RDY */
+                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))
+                    g_CurrState = BNO_RDY;
 
                 break;
 

@@ -13,10 +13,13 @@
 void BLE_serialTask(void *pvParameters)
 {
     unsigned char str[32];
+    unsigned char comm[]='XREAD';
+    uint8_t com_count=0;
+
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
     while(1)
     {
-        EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+        EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG|DATA_SEND_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
         int i=0;
 #ifdef USB_CONN
@@ -41,9 +44,19 @@ void BLE_serialTask(void *pvParameters)
         }
         if((aux & USB_FLAG)==USB_FLAG)
         {
+            vTaskDelay(configTICK_RATE_HZ*0.001);
             while(xQueueReceive(xRxedChars0,&str[i],0/*sin espera*/))
             {
                 i++;
+                if(str[i]==comm[com_count])
+                {
+                    com_count++;
+                    if(com_count==5)
+                        xEventGroupSetBits(Signals,0x20);
+                }
+                else if(com_count>0)
+                    com_count=0;
+
                 if(i>=32)
                     break;
             }
@@ -57,6 +70,25 @@ void BLE_serialTask(void *pvParameters)
             {
                 xQueueSend(xCharsForTx1, &str[d],0);
             }
+        }
+        if(aux & DATA_SEND_FLAG)
+        {
+            while(xQueueReceive(xCharsForTx0,&str[i],0/*sin espera*/))
+            {
+                i++;
+                if(i>=32)
+                    break;
+            }
+            int d=0;
+            while((UARTSpaceAvail(UART0_BASE))&&(d<i))
+            {
+                UARTCharPutNonBlocking(UART0_BASE,str[d++]);
+            }
+            for(d=d; d<i; d++)
+            {
+                xQueueSend(xCharsForTx0, &str[d],0);
+            }
+
         }
 
 #endif
@@ -97,8 +129,8 @@ void UARTBLEinit()
 
     UARTFIFOLevelSet(UART0_BASE, UART_FIFO_TX1_8, UART_FIFO_RX1_8);
 
-    UARTIntClear(UART0_BASE, UART_INT_RX|UART_INT_RT|UART_INT_TX);
-    UARTIntEnable(UART0_BASE, UART_INT_RX|UART_INT_RT|UART_INT_TX);
+    UARTIntClear(UART0_BASE, UART_INT_RX|UART_INT_RT);
+    UARTIntEnable(UART0_BASE, UART_INT_RX|UART_INT_RT);
     UARTFIFOEnable(UART0_BASE);
     IntEnable(INT_UART0);
     UARTEnable(UART0_BASE);
