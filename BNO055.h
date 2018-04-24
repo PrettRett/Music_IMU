@@ -28,6 +28,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/i2c.h"
 #include "driverlib/interrupt.h"
+#include "BLE_serial.h"
 
 #define NUM_BNO055_OFFSET_REGISTERS (22)
 

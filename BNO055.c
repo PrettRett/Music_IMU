@@ -118,15 +118,11 @@ void BNO_COMM(void *pvParameters)
                 BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_AMG);
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR,&reg,1);
                 vTaskDelay(configTICK_RATE_HZ*0.252);
-                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x01);
                 BNO_ReadRegister(BNO055_PAGE_ID_ADDR,&reg,1);
                 if(reg!=0x01)
                 {
-                    g_CurrState=ERROR;
-                    break;
+                    BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x01);
                 }
-                vTaskDelay(configTICK_RATE_HZ*0.3);
-                BNO_WriteRegister(ACC_Config,ACC_PARAM);
                 if(BNO_ReadRegister(ACC_Config,&reg,1)<0)
                 {
                     g_CurrState=ERROR;
@@ -134,11 +130,8 @@ void BNO_COMM(void *pvParameters)
                 }
                 if(reg!=ACC_PARAM)
                 {
-                    g_CurrState=ERROR;
-                    break;
+                    BNO_WriteRegister(ACC_Config,ACC_PARAM);
                 }
-                vTaskDelay(configTICK_RATE_HZ*0.3);
-                BNO_WriteRegister(MAG_Config,MAG_PARAM);
                 if(BNO_ReadRegister(MAG_Config,&reg,1)<0)
                 {
                     g_CurrState=ERROR;
@@ -146,11 +139,8 @@ void BNO_COMM(void *pvParameters)
                 }
                 if(reg!=MAG_PARAM)
                 {
-                    g_CurrState=ERROR;
-                    break;
+                    BNO_WriteRegister(MAG_Config,MAG_PARAM);
                 }
-                vTaskDelay(configTICK_RATE_HZ*0.3);
-                BNO_WriteRegister(GYR_Config_0, GYR_PARAM_0);
                 if(BNO_ReadRegister(GYR_Config_0,&reg,1)<0)
                 {
                     g_CurrState=ERROR;
@@ -158,11 +148,8 @@ void BNO_COMM(void *pvParameters)
                 }
                 if(reg!=GYR_PARAM_0)
                 {
-                    g_CurrState=ERROR;
-                    break;
+                    BNO_WriteRegister(GYR_Config_0, GYR_PARAM_0);
                 }
-                vTaskDelay(configTICK_RATE_HZ*0.3);
-                BNO_WriteRegister(GYR_Config_1, GYR_PARAM_0);
                 if(BNO_ReadRegister(GYR_Config_1,&reg,1)<0)
                 {
                     g_CurrState=ERROR;
@@ -170,8 +157,7 @@ void BNO_COMM(void *pvParameters)
                 }
                 if(reg!=GYR_PARAM_1)
                 {
-                    g_CurrState=ERROR;
-                    break;
+                    BNO_WriteRegister(GYR_Config_1, GYR_PARAM_0);
                 }
 
                 BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
@@ -189,7 +175,7 @@ void BNO_COMM(void *pvParameters)
                 g_CurrState = BNO_READ;
 
 #ifdef USB_CONN //codigo de prueba pre-bluetooth
-                xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1);
+                xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
 #else
                 vTaskDelay(portMAX_DELAY);
 #endif
@@ -216,7 +202,7 @@ void BNO_COMM(void *pvParameters)
                     g_CurrState = ERROR;
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))
+                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))
                     g_CurrState = BNO_RDY;
 
                 break;
