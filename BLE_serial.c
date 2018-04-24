@@ -13,9 +13,11 @@
 void BLE_serialTask(void *pvParameters)
 {
     unsigned char str[32];
+    GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
     while(1)
     {
         EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+        GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
         int i=0;
 #ifdef USB_CONN
         if((aux & BLE_FLAG)==BLE_FLAG)
@@ -27,7 +29,7 @@ void BLE_serialTask(void *pvParameters)
                     break;
             }
             int d=0;
-            while((UARTSpaceAvail(UART0_BASE))&&(d<=i))
+            while((UARTSpaceAvail(UART0_BASE))&&(d<i))
             {
                 UARTCharPutNonBlocking(UART0_BASE,str[d]);
                 d++;
@@ -46,7 +48,7 @@ void BLE_serialTask(void *pvParameters)
                     break;
             }
             int d=0;
-            while((UARTSpaceAvail(UART1_BASE))&&(d<=i))
+            while((UARTSpaceAvail(UART1_BASE))&&(d<i))
             {
                 UARTCharPutNonBlocking(UART1_BASE,str[d]);
                 d++;
@@ -127,6 +129,7 @@ void UARTBLEinit()
     //--------------------Habilitarel ENABLE del HM-10-------------------
     GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE,GPIO_PIN_4);
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
+    while(GPIOPinRead(GPIO_PORTB_BASE,GPIO_PIN_5));
 }
 
 
