@@ -30,7 +30,7 @@
 #include "driverlib/interrupt.h"
 
 #define USB_CONN
-#define QUEUE_LENGTH 24
+#define QUEUE_LENGTH 80
 #define QUEUE_SIZE sizeof(uint8_t)
 
 //funcion de freeRTOS

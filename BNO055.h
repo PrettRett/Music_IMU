@@ -324,7 +324,7 @@ typedef struct
     } adafruit_vector_type_t;
 
     uint8_t mode_BNO;
-    uint8_t mult_read[18];
+    uint8_t mult_read[45];
     void BNO_COMM(void *pvParameters);
     void BNO_init();
 

@@ -48,16 +48,15 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
 
     for(count=0;count<bytesToRead;count++)
     {
-        bytesReadBuff[count]=(0xFF&I2CMasterDataGet(I2C0_BASE));
+        bytesReadBuff[count]=(0xFF & I2CMasterDataGet(I2C0_BASE));
         if((count+1)<bytesToRead)
         {
             I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
             if(xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY)&(STOP_FLAG|NACK_FLAG))
                 return -1;
         }
-        else
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
     }
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
     return count;
 }
 
@@ -114,14 +113,20 @@ void BNO_COMM(void *pvParameters)
                 BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR, 0x80);
                 BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
                 vTaskDelay(configTICK_RATE_HZ*0.49);
-                mode_BNO=OPERATION_MODE_AMG;
+                /*mode_BNO=OPERATION_MODE_AMG;
                 BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_AMG);
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR,&reg,1);
                 vTaskDelay(configTICK_RATE_HZ*0.252);
+                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x01);
+                vTaskDelay(configTICK_RATE_HZ*0.252);
+                BNO_WriteRegister(ACC_Config,ACC_PARAM);
+                BNO_WriteRegister(MAG_Config,MAG_PARAM);
+                BNO_WriteRegister(GYR_Config_0, GYR_PARAM_0);
+                BNO_WriteRegister(GYR_Config_1, GYR_PARAM_0);
                 BNO_ReadRegister(BNO055_PAGE_ID_ADDR,&reg,1);
                 if(reg!=0x01)
                 {
-                    BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x01);
+                    g_CurrState=ERROR;
                 }
                 if(BNO_ReadRegister(ACC_Config,&reg,1)<0)
                 {
@@ -130,35 +135,32 @@ void BNO_COMM(void *pvParameters)
                 }
                 if(reg!=ACC_PARAM)
                 {
-                    BNO_WriteRegister(ACC_Config,ACC_PARAM);
+                    g_CurrState=ERROR;
                 }
                 if(BNO_ReadRegister(MAG_Config,&reg,1)<0)
                 {
                     g_CurrState=ERROR;
-                    break;
                 }
                 if(reg!=MAG_PARAM)
                 {
-                    BNO_WriteRegister(MAG_Config,MAG_PARAM);
+                    g_CurrState=ERROR;
                 }
                 if(BNO_ReadRegister(GYR_Config_0,&reg,1)<0)
                 {
                     g_CurrState=ERROR;
-                    break;
                 }
                 if(reg!=GYR_PARAM_0)
                 {
-                    BNO_WriteRegister(GYR_Config_0, GYR_PARAM_0);
+                    g_CurrState=ERROR;
                 }
                 if(BNO_ReadRegister(GYR_Config_1,&reg,1)<0)
                 {
                     g_CurrState=ERROR;
-                    break;
                 }
                 if(reg!=GYR_PARAM_1)
                 {
-                    BNO_WriteRegister(GYR_Config_1, GYR_PARAM_0);
-                }
+                    g_CurrState=ERROR;
+                }*/
 
                 BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
                 vTaskDelay(configTICK_RATE_HZ*0.1);
@@ -173,6 +175,8 @@ void BNO_COMM(void *pvParameters)
             case BNO_RDY:
                 g_PrevState = g_CurrState;
                 g_CurrState = BNO_READ;
+                mode_BNO=OPERATION_MODE_NDOF;
+                BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO);
 
 #ifdef USB_CONN //codigo de prueba pre-bluetooth
                 xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -191,18 +195,28 @@ void BNO_COMM(void *pvParameters)
 
             case BNO_READ:
                 g_PrevState = g_CurrState;
+                unsigned char end[]="\r\n";
 
                 /* Código para leer los registros necesarios */
-                BNO_ReadRegister(MAG_OFFSET_X_LSB_ADDR,mult_read,18);
-                int i, s;
-                s=pdTRUE;
-                for(i=0; i<18; i++)
-                    s=s && xQueueSend(xCharsForTx0,&mult_read[i],0);
-                if(s!=pdTRUE)
+                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,mult_read,45)<0)
                     g_CurrState = ERROR;
 
+                int i, s;
+                s=pdTRUE;
+                for(i=0; i<45; i++)
+                    s=s && xQueueSend(xCharsForTx0,&mult_read[i],0);
+                s=s && xQueueSend(xCharsForTx0,&end[0],0);
+                s=s && xQueueSend(xCharsForTx0,&end[1],0);
+                xEventGroupSetBits(Signals,DATA_SEND_FLAG);
+                if(s!=pdTRUE)
+                    g_CurrState = ERROR;
+                uint8_t prev_mode=mode_BNO;
+                BNO_ReadRegister(BNO055_OPR_MODE_ADDR, &mode_BNO,1);
+                /*if(mode_BNO!=prev_mode)
+                    g_CurrState = ERROR;*/
+
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))
+                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.2)&READ_FLAG)
                     g_CurrState = BNO_RDY;
 
                 break;
@@ -216,7 +230,6 @@ void BNO_COMM(void *pvParameters)
 
 
             case ERROR:
-                vTaskDelay(portMAX_DELAY);
                 g_CurrState = ERROR;
                 break;
 

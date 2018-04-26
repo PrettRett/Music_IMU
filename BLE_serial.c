@@ -12,8 +12,8 @@
 
 void BLE_serialTask(void *pvParameters)
 {
-    unsigned char str[32];
-    unsigned char comm[]='XREAD';
+    unsigned char str;
+    unsigned char comm[]="XREAD";
     uint8_t com_count=0;
 
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
@@ -25,30 +25,12 @@ void BLE_serialTask(void *pvParameters)
 #ifdef USB_CONN
         if((aux & BLE_FLAG)==BLE_FLAG)
         {
-            while(xQueueReceive(xRxedChars1,&str[i],0/*sin espera*/))
+            while(uxQueueMessagesWaiting(xRxedChars1)&&uxQueueSpacesAvailable(xCharsForTx0))
             {
-                i++;
-                if(i>=32)
-                    break;
-            }
-            int d=0;
-            while((UARTSpaceAvail(UART0_BASE))&&(d<i))
-            {
-                UARTCharPutNonBlocking(UART0_BASE,str[d]);
-                d++;
-            }
-            for(d=d; d<i; d++)
-            {
-                xQueueSend(xCharsForTx0, &str[d],0);
-            }
-        }
-        if((aux & USB_FLAG)==USB_FLAG)
-        {
-            vTaskDelay(configTICK_RATE_HZ*0.001);
-            while(xQueueReceive(xRxedChars0,&str[i],0/*sin espera*/))
-            {
-                i++;
-                if(str[i]==comm[com_count])
+                xQueueReceive(xRxedChars1,&str,portMAX_DELAY);
+                xQueueSend(xCharsForTx0,&str,portMAX_DELAY);
+
+                if(str==comm[com_count])
                 {
                     com_count++;
                     if(com_count==5)
@@ -57,29 +39,78 @@ void BLE_serialTask(void *pvParameters)
                 else if(com_count>0)
                     com_count=0;
 
-                if(i>=32)
-                    break;
             }
-            int d=0;
-            while((UARTSpaceAvail(UART1_BASE))&&(d<i))
+            //
+            // Disable the UART interrupt.  If we don't do this there is a race
+            // condition which can cause the read index to be corrupted.
+            //
+            UARTIntDisable(UART1_BASE, UART_INT_TX);
+
+            //
+            // Yes - take some characters out of the transmit buffer and feed
+            // them to the UART transmit FIFO.
+            //
+            while(UARTSpaceAvail(UART0_BASE) && (uxQueueMessagesWaiting(xCharsForTx0)))
             {
-                UARTCharPutNonBlocking(UART1_BASE,str[d]);
-                d++;
+                uint8_t data;
+                xQueueReceive(xCharsForTx0,&data,portMAX_DELAY);
+                UARTCharPutNonBlocking(UART0_BASE,data);
             }
-            for(d=d; d<i; d++)
+
+            //
+            // Reenable the UART interrupt.
+            //
+            MAP_UARTIntEnable(UART1_BASE, UART_INT_TX);
+        }
+        if((aux & USB_FLAG)==USB_FLAG)
+        {
+            while(uxQueueMessagesWaiting(xRxedChars0)&&uxQueueSpacesAvailable(xCharsForTx1))
             {
-                xQueueSend(xCharsForTx1, &str[d],0);
+                xQueueReceive(xRxedChars0,&str,portMAX_DELAY);
+                xQueueSend(xCharsForTx1,&str,portMAX_DELAY);
+
+                if(str==comm[com_count])
+                {
+                    com_count++;
+                    if(com_count==5)
+                        xEventGroupSetBits(Signals,0x20);
+                }
+                else if(com_count>0)
+                    com_count=0;
+
             }
+            //
+            // Disable the UART interrupt.  If we don't do this there is a race
+            // condition which can cause the read index to be corrupted.
+            //
+            UARTIntDisable(UART0_BASE, UART_INT_TX);
+
+            //
+            // Yes - take some characters out of the transmit buffer and feed
+            // them to the UART transmit FIFO.
+            //
+            while(UARTSpaceAvail(UART1_BASE) && (uxQueueMessagesWaiting(xCharsForTx1)))
+            {
+                uint8_t data;
+                xQueueReceive(xCharsForTx1,&data,portMAX_DELAY);
+                UARTCharPutNonBlocking(UART1_BASE,data);
+            }
+
+            //
+            // Reenable the UART interrupt.
+            //
+            MAP_UARTIntEnable(UART0_BASE, UART_INT_TX);
         }
         if(aux & DATA_SEND_FLAG)
         {
-            while(xQueueReceive(xCharsForTx0,&str[i],0/*sin espera*/))
+            /*while(xQueueReceive(xCharsForTx0,&str[i],0/*sin espera*//*))
             {
                 i++;
                 if(i>=32)
                     break;
             }
             int d=0;
+            UARTIntEnable(UART0_BASE, UART_INT_TX);
             while((UARTSpaceAvail(UART0_BASE))&&(d<i))
             {
                 UARTCharPutNonBlocking(UART0_BASE,str[d++]);
@@ -88,6 +119,30 @@ void BLE_serialTask(void *pvParameters)
             {
                 xQueueSend(xCharsForTx0, &str[d],0);
             }
+            UARTIntEnable(UART0_BASE, UART_INT_TX);*/
+
+
+            //
+            // Disable the UART interrupt.  If we don't do this there is a race
+            // condition which can cause the read index to be corrupted.
+            //
+            UARTIntDisable(UART0_BASE, UART_INT_TX);
+
+            //
+            // Yes - take some characters out of the transmit buffer and feed
+            // them to the UART transmit FIFO.
+            //
+            while(UARTSpaceAvail(UART0_BASE) && (uxQueueMessagesWaiting(xCharsForTx0)))
+            {
+                uint8_t data;
+                xQueueReceive(xCharsForTx0,&data,portMAX_DELAY);
+                UARTCharPutNonBlocking(UART0_BASE,data);
+            }
+
+            //
+            // Reenable the UART interrupt.
+            //
+            MAP_UARTIntEnable(UART0_BASE, UART_INT_TX);
 
         }
 
