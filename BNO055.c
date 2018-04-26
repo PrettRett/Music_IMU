@@ -9,19 +9,20 @@
 
 uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
 {
-    I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
     do
     {
-        I2CMasterDataPut(I2C0_BASE, reg8bits);
-        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-    }
-    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
-    do
-    {
+        do
+        {
+            I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+            I2CMasterDataPut(I2C0_BASE, reg8bits);
+            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+        }
+        while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
+
         I2CMasterDataPut(I2C0_BASE, dataWriting);
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
     }
-    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
     return pdTRUE;
 }
 
@@ -34,7 +35,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
         I2CMasterDataPut(I2C0_BASE, firstRegToRead);
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
     }
-    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
 
     do
     {
@@ -44,19 +45,23 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
         else
             I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
     }
-    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY))&(ACK_DATA_FLAG)));
+    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
 
-    for(count=0;count<bytesToRead;count++)
+    for(count=0;count<(bytesToRead-1);count++)
     {
         bytesReadBuff[count]=(0xFF & I2CMasterDataGet(I2C0_BASE));
-        if((count+1)<bytesToRead)
-        {
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
-            if(xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, portMAX_DELAY)&(STOP_FLAG|NACK_FLAG))
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
+        if(xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)&(STOP_FLAG|NACK_FLAG))
                 return -1;
-        }
     }
-    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    bytesReadBuff[count]=(0xFF & I2CMasterDataGet(I2C0_BASE));
+    if(bytesToRead>1)
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    else
+    {
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+    }
+
     return count;
 }
 
@@ -80,7 +85,6 @@ void BNO_COMM(void *pvParameters)
                 if(reg==0xA0)
                 {
                     BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR,0x20);//hacemos un reset al modulo
-                    vTaskDelay(configTICK_RATE_HZ*0.7);
                     do
                     {
                         BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
@@ -88,7 +92,6 @@ void BNO_COMM(void *pvParameters)
                     while(reg!=0x00);
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
                     mode_BNO=OPERATION_MODE_CONFIG;
-                    vTaskDelay(configTICK_RATE_HZ*0.02);
                     BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
                     BNO_WriteRegister(BNO055_PWR_MODE_ADDR,POWER_MODE_NORMAL);
                 }
@@ -103,16 +106,15 @@ void BNO_COMM(void *pvParameters)
                 g_CurrState = BNO_RDY;
 
                 BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
+                vTaskDelay(configTICK_RATE_HZ*0.252);
                 BNO_ReadRegister(BNO055_PAGE_ID_ADDR,&reg,1);
                 if(mode_BNO!=OPERATION_MODE_CONFIG)
                 {
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
                     mode_BNO=OPERATION_MODE_CONFIG;
-                    vTaskDelay(configTICK_RATE_HZ*0.2);
                 }
                 BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR, 0x80);
                 BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
-                vTaskDelay(configTICK_RATE_HZ*0.49);
                 /*mode_BNO=OPERATION_MODE_AMG;
                 BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_AMG);
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR,&reg,1);
@@ -212,11 +214,14 @@ void BNO_COMM(void *pvParameters)
                     g_CurrState = ERROR;
                 uint8_t prev_mode=mode_BNO;
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR, &mode_BNO,1);
-                /*if(mode_BNO!=prev_mode)
-                    g_CurrState = ERROR;*/
+                if(mode_BNO!=prev_mode)
+                {
+                    mode_BNO=OPERATION_MODE_NDOF;
+                    BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO);
+                }
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.2)&READ_FLAG)
+                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*1)&READ_FLAG)
                     g_CurrState = BNO_RDY;
 
                 break;
@@ -252,6 +257,7 @@ void BNO_init()
     GPIOPinTypeI2C(GPIO_PORTB_BASE,GPIO_PIN_3);
     GPIOPinTypeI2CSCL(GPIO_PORTB_BASE,GPIO_PIN_2);
     I2CMasterInitExpClk(I2C0_BASE, SysCtlClockGet(), pdTRUE);
+    I2CMasterGlitchFilterConfigSet(I2C0_BASE,I2C_MASTER_GLITCH_FILTER_2);
     I2CMasterIntClear(I2C0_BASE);
     I2CMasterIntEnable(I2C0_BASE);
     I2CMasterIntEnableEx(I2C0_BASE , I2C_MASTER_INT_STOP | I2C_MASTER_INT_NACK

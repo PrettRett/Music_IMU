@@ -21,7 +21,6 @@ void BLE_serialTask(void *pvParameters)
     {
         EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG|DATA_SEND_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
-        int i=0;
 #ifdef USB_CONN
         if((aux & BLE_FLAG)==BLE_FLAG)
         {
@@ -34,7 +33,10 @@ void BLE_serialTask(void *pvParameters)
                 {
                     com_count++;
                     if(com_count==5)
+                    {
                         xEventGroupSetBits(Signals,0x20);
+                        com_count=0;
+                    }
                 }
                 else if(com_count>0)
                     com_count=0;
