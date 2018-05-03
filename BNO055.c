@@ -198,6 +198,7 @@ void BNO_COMM(void *pvParameters)
             case BNO_READ:
                 g_PrevState = g_CurrState;
                 unsigned char end[]="\r\n";
+                unsigned char separation=';';
 
                 /* Código para leer los registros necesarios */
                 if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,mult_read,45)<0)
@@ -206,7 +207,12 @@ void BNO_COMM(void *pvParameters)
                 int i, s;
                 s=pdTRUE;
                 for(i=0; i<45; i++)
+                {
+                    s=s && xQueueSend(xCharsForTx0,&mult_read[i++],0);
                     s=s && xQueueSend(xCharsForTx0,&mult_read[i],0);
+                    s=s && xQueueSend(xCharsForTx0,&separation,0);
+
+                }
                 s=s && xQueueSend(xCharsForTx0,&end[0],0);
                 s=s && xQueueSend(xCharsForTx0,&end[1],0);
                 xEventGroupSetBits(Signals,DATA_SEND_FLAG);
