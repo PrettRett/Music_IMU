@@ -10,6 +10,7 @@
 
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "semphr.h"
 #include "list.h"
 #include "timers.h"
 #include "event_groups.h"
@@ -43,8 +44,9 @@
     #define USB_FLAG 0x00
 #endif
 
+extern SemaphoreHandle_t mut;
 extern EventGroupHandle_t Signals;
-
+extern uint8_t mult_read[45];
 QueueHandle_t xRxedChars1, xCharsForTx1;
 
 void BLE_serialTask(void *pvParameters);

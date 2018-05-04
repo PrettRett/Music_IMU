@@ -36,6 +36,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
     }
     while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
+    while(I2CMasterBusy(I2C0_BASE));
 
     do
     {
@@ -46,6 +47,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
             I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
     }
     while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
+    while(I2CMasterBusy(I2C0_BASE));
 
     for(count=0;count<(bytesToRead-1);count++)
     {
@@ -53,14 +55,20 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
         if(xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)&(STOP_FLAG|NACK_FLAG))
                 return -1;
+        while(I2CMasterBusy(I2C0_BASE));
     }
     bytesReadBuff[count]=(0xFF & I2CMasterDataGet(I2C0_BASE));
     if(bytesToRead>1)
+    {
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+        while(I2CMasterBusy(I2C0_BASE));
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_ERROR_STOP);
+    }
     else
     {
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
     }
+
 
     return count;
 }
@@ -197,27 +205,27 @@ void BNO_COMM(void *pvParameters)
 
             case BNO_READ:
                 g_PrevState = g_CurrState;
-                unsigned char end[]="\r\n";
-                unsigned char separation=';';
-
+                xSemaphoreTake(mut,portMAX_DELAY);
                 /* Código para leer los registros necesarios */
                 if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,mult_read,45)<0)
                     g_CurrState = ERROR;
 
-                int i, s;
+                //---------Código previo(poco optimizado)--------------
+/*                int i, s;
                 s=pdTRUE;
                 for(i=0; i<45; i++)
                 {
-                    s=s && xQueueSend(xCharsForTx0,&mult_read[i++],0);
-                    s=s && xQueueSend(xCharsForTx0,&mult_read[i],0);
-                    s=s && xQueueSend(xCharsForTx0,&separation,0);
+                    s=s && xQueueSend(xCharsForTx0,&mult_read[i++],portMAX_DELAY);
+                    s=s && xQueueSend(xCharsForTx0,&mult_read[i],portMAX_DELAY);
+                    s=s && xQueueSend(xCharsForTx0,&separation,portMAX_DELAY);
 
                 }
-                s=s && xQueueSend(xCharsForTx0,&end[0],0);
-                s=s && xQueueSend(xCharsForTx0,&end[1],0);
-                xEventGroupSetBits(Signals,DATA_SEND_FLAG);
+                s=s && xQueueSend(xCharsForTx0,&end[0],portMAX_DELAY);
+                s=s && xQueueSend(xCharsForTx0,&end[1],portMAX_DELAY);
                 if(s!=pdTRUE)
-                    g_CurrState = ERROR;
+                    g_CurrState = ERROR;*/
+                xSemaphoreGive(mut);
+                xEventGroupSetBits(Signals,DATA_SEND_FLAG);
                 uint8_t prev_mode=mode_BNO;
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR, &mode_BNO,1);
                 if(mode_BNO!=prev_mode)
@@ -227,7 +235,7 @@ void BNO_COMM(void *pvParameters)
                 }
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*1)&READ_FLAG)
+                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)&READ_FLAG)
                     g_CurrState = BNO_RDY;
 
                 break;

@@ -75,7 +75,10 @@ void BLE_serialTask(void *pvParameters)
                 {
                     com_count++;
                     if(com_count==5)
+                    {
                         xEventGroupSetBits(Signals,0x20);
+                        com_count=0;
+                    }
                 }
                 else if(com_count>0)
                     com_count=0;
@@ -105,23 +108,6 @@ void BLE_serialTask(void *pvParameters)
         }
         if(aux & DATA_SEND_FLAG)
         {
-            /*while(xQueueReceive(xCharsForTx0,&str[i],0/*sin espera*//*))
-            {
-                i++;
-                if(i>=32)
-                    break;
-            }
-            int d=0;
-            UARTIntEnable(UART0_BASE, UART_INT_TX);
-            while((UARTSpaceAvail(UART0_BASE))&&(d<i))
-            {
-                UARTCharPutNonBlocking(UART0_BASE,str[d++]);
-            }
-            for(d=d; d<i; d++)
-            {
-                xQueueSend(xCharsForTx0, &str[d],0);
-            }
-            UARTIntEnable(UART0_BASE, UART_INT_TX);*/
 
 
             //
@@ -129,21 +115,41 @@ void BLE_serialTask(void *pvParameters)
             // condition which can cause the read index to be corrupted.
             //
             UARTIntDisable(UART0_BASE, UART_INT_TX);
+            unsigned char end[]="\r\n";
+            unsigned char separation=';';
+
+            xSemaphoreTake(mut,portMAX_DELAY);
+            int i=0;
+            int d=0;
+            while(UARTSpaceAvail(UART0_BASE)&&(i<67) )
+            {
+                if(i%3!=2)
+                    UARTCharPutNonBlocking(UART0_BASE,mult_read[d++]);
+                else
+                    UARTCharPutNonBlocking(UART0_BASE,separation);
+                i++;
+            }
 
             //
             // Yes - take some characters out of the transmit buffer and feed
             // them to the UART transmit FIFO.
             //
-            while(UARTSpaceAvail(UART0_BASE) && (uxQueueMessagesWaiting(xCharsForTx0)))
+            while(i<67)
             {
-                uint8_t data;
-                xQueueReceive(xCharsForTx0,&data,portMAX_DELAY);
-                UARTCharPutNonBlocking(UART0_BASE,data);
+                if(i%3!=2)
+                    xQueueSend(xCharsForTx0,&mult_read[d++],portMAX_DELAY);
+                else
+                    xQueueSend(xCharsForTx0,&separation,portMAX_DELAY);
+                i++;
             }
+            xQueueSend(xCharsForTx0,&end[0],portMAX_DELAY);
+            xQueueSend(xCharsForTx0,&end[1],portMAX_DELAY);
+
 
             //
             // Reenable the UART interrupt.
             //
+            xSemaphoreGive(mut);
             MAP_UARTIntEnable(UART0_BASE, UART_INT_TX);
 
         }
@@ -160,6 +166,7 @@ void UARTBLEinit()
 
     xCharsForTx1=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
     xRxedChars1=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
+    mut=xSemaphoreCreateMutex();
 
     //
     // Inicializa la UARTy la configura a 115.200 bps, 8-N-1 .
@@ -180,7 +187,7 @@ void UARTBLEinit()
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART0);   //La UART tiene que seguir funcionando aunque el micro esta dormido
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOA);
     UARTClockSourceSet(UART0_BASE,UART_CLOCK_SYSTEM);
-    UARTConfigSetExpClk(UART0_BASE,SysCtlClockGet(),9600,
+    UARTConfigSetExpClk(UART0_BASE,SysCtlClockGet(),115200,
                        UART_CONFIG_WLEN_8|UART_CONFIG_STOP_ONE|
                        UART_CONFIG_PAR_NONE);
 
@@ -193,7 +200,7 @@ void UARTBLEinit()
     UARTEnable(UART0_BASE);
 #endif
 
-    //---------------------UART0------------------------------------------
+    //---------------------UART1------------------------------------------
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
     GPIOPinConfigure(GPIO_PB0_U1RX);

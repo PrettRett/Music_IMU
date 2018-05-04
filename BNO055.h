@@ -12,6 +12,7 @@
 #include "queue.h"
 #include "list.h"
 #include "timers.h"
+#include "semphr.h"
 #include "event_groups.h"
 #include "portmacro.h"
 #include "task.h"
@@ -59,6 +60,7 @@ I2C_MASTER_STATE  g_CurrState;
 I2C_MASTER_STATE  g_PrevState;
 
 extern EventGroupHandle_t Signals;
+extern SemaphoreHandle_t mut;
 
 
 typedef struct

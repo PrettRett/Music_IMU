@@ -5,6 +5,7 @@
  */
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "semphr.h"
 #include "list.h"
 #include "event_groups.h"
 #include "portmacro.h"
@@ -27,6 +28,7 @@
 #include "BNO055.h"
 
 EventGroupHandle_t Signals;
+SemaphoreHandle_t mut;
 
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 {

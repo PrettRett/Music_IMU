@@ -20,7 +20,7 @@
 #define configUSE_16_BIT_TICKS                  0       //Time is measured in 'ticks' - which is the number of times the tick interrupt has executed since the RTOS kernel was started. The tick count is held in a variable of type TickType_t.
 #define configIDLE_SHOULD_YIELD                 1       //This parameter controls the behaviour of tasks at the idle priority.
 #define configUSE_TASK_NOTIFICATIONS            1       //Setting configUSE_TASK_NOTIFICATIONS to 1 (or leaving configUSE_TASK_NOTIFICATIONS undefined) will include direct to task notification functionality and its associated API in the build.
-#define configUSE_MUTEXES                       0       //Set to 1 to include mutex functionality in the build, or 0 to omit mutex functionality from the build. Readers should familiarise themselves with the differences between mutexes and binary semaphores in relation to the FreeRTOS functionality.
+#define configUSE_MUTEXES                       1       //Set to 1 to include mutex functionality in the build, or 0 to omit mutex functionality from the build. Readers should familiarise themselves with the differences between mutexes and binary semaphores in relation to the FreeRTOS functionality.
 #define configUSE_RECURSIVE_MUTEXES             0       //Set to 1 to include recursive mutex functionality in the build, or 0 to omit recursive mutex functionality from the build.
 #define configUSE_COUNTING_SEMAPHORES           0
 #define configUSE_ALTERNATIVE_API               0 /* Deprecated! */
