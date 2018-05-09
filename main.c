@@ -29,6 +29,7 @@
 
 EventGroupHandle_t Signals;
 SemaphoreHandle_t mut;
+uint8_t mode_BNO;
 
 void vApplicationStackOverflowHook( TaskHandle_t xTask, char *pcTaskName )
 {

@@ -124,7 +124,7 @@ void BLE_serialTask(void *pvParameters)
             while(UARTSpaceAvail(UART0_BASE)&&(i<67) )
             {
                 if(i%3!=2)
-                    UARTCharPutNonBlocking(UART0_BASE,mult_read[d++]);
+                    UARTCharPutNonBlocking(UART0_BASE,sensors_value.mult_read[d++]);
                 else
                     UARTCharPutNonBlocking(UART0_BASE,separation);
                 i++;
@@ -137,7 +137,7 @@ void BLE_serialTask(void *pvParameters)
             while(i<67)
             {
                 if(i%3!=2)
-                    xQueueSend(xCharsForTx0,&mult_read[d++],portMAX_DELAY);
+                    xQueueSend(xCharsForTx0,&(sensors_value.mult_read[d++]),portMAX_DELAY);
                 else
                     xQueueSend(xCharsForTx0,&separation,portMAX_DELAY);
                 i++;

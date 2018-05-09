@@ -29,9 +29,9 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/i2c.h"
 #include "driverlib/interrupt.h"
-#include "BLE_serial.h"
 
 #define NUM_BNO055_OFFSET_REGISTERS (22)
+#define DATA_SEND_FLAG 0X40
 
 #define BNO_ADDRESS 0x29
 #define NACK_FLAG 0X04
@@ -325,8 +325,65 @@ typedef struct
       VECTOR_GRAVITY       = BNO055_GRAVITY_DATA_X_LSB_ADDR
     } adafruit_vector_type_t;
 
-    uint8_t mode_BNO;
-    uint8_t mult_read[45];
+    extern uint8_t mode_BNO;
+    typedef union {
+        uint8_t mult_read[45];
+
+        struct __attribute__((__packed__)) BNO_info
+        {
+            uint8_t ACCX_LSB:8;
+            uint8_t ACCX_MSB:8;
+            uint8_t ACCY_LSB:8;
+            uint8_t ACCY_MSB:8;
+            uint8_t ACCZ_LSB:8;
+            uint8_t ACCZ_MSB:8;
+
+            uint8_t MAGX_LSB:8;
+            uint8_t MAGX_MSB:8;
+            uint8_t MAGY_LSB:8;
+            uint8_t MAGY_MSB:8;
+            uint8_t MAGZ_LSB:8;
+            uint8_t MAGZ_MSB:8;
+
+            uint8_t GYRX_LSB:8;
+            uint8_t GYRX_MSB:8;
+            uint8_t GYRY_LSB:8;
+            uint8_t GYRY_MSB:8;
+            uint8_t GYRZ_LSB:8;
+            uint8_t GYRZ_MSB:8;
+
+            uint8_t EULH_LSB:8;
+            uint8_t EULH_MSB:8;
+            uint8_t EULR_LSB:8;
+            uint8_t EULR_MSB:8;
+            uint8_t EULP_LSB:8;
+            uint8_t EULP_MSB:8;
+
+            uint8_t QUAW_LSB:8;
+            uint8_t QUAW_MSB:8;
+            uint8_t QUAX_LSB:8;
+            uint8_t QUAX_MSB:8;
+            uint8_t QUAY_LSB:8;
+            uint8_t QUAY_MSB:8;
+            uint8_t QUAZ_LSB:8;
+            uint8_t QUAZ_MSB:8;
+
+            uint8_t LINX_LSB:8;
+            uint8_t LINX_MSB:8;
+            uint8_t LINY_LSB:8;
+            uint8_t LINY_MSB:8;
+            uint8_t LINZ_LSB:8;
+            uint8_t LINZ_MSB:8;
+
+            uint8_t GRAVX_LSB:8;
+            uint8_t GRAVX_MSB:8;
+            uint8_t GRAVY_LSB:8;
+            uint8_t GRAVY_MSB:8;
+            uint8_t GRAVZ_LSB:8;
+            uint8_t GRAVZ_MSB:8;
+        }axis;
+    } AXIS_INFO;
+    AXIS_INFO sensors_value;
     void BNO_COMM(void *pvParameters);
     void BNO_init();
 

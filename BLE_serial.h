@@ -29,6 +29,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/uart.h"
 #include "driverlib/interrupt.h"
+#include "BNO055.h"
 
 #define USB_CONN
 #define QUEUE_LENGTH 80
@@ -44,9 +45,9 @@
     #define USB_FLAG 0x00
 #endif
 
+extern uint8_t mode_BNO;
 extern SemaphoreHandle_t mut;
 extern EventGroupHandle_t Signals;
-extern uint8_t mult_read[45];
 QueueHandle_t xRxedChars1, xCharsForTx1;
 
 void BLE_serialTask(void *pvParameters);

@@ -75,7 +75,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
 
 void BNO_COMM(void *pvParameters)
 {
-
+    g_CurrState=BNO_INIT;
     uint8_t reg=0;
     while(1)
     {
@@ -207,7 +207,7 @@ void BNO_COMM(void *pvParameters)
                 g_PrevState = g_CurrState;
                 xSemaphoreTake(mut,portMAX_DELAY);
                 /* Código para leer los registros necesarios */
-                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,mult_read,45)<0)
+                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,&(sensors_value.mult_read[0]),45)<0)
                     g_CurrState = ERROR;
 
                 //---------Código previo(poco optimizado)--------------
@@ -230,7 +230,7 @@ void BNO_COMM(void *pvParameters)
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR, &mode_BNO,1);
                 if(mode_BNO!=prev_mode)
                 {
-                    mode_BNO=OPERATION_MODE_NDOF;
+                    mode_BNO=prev_mode;
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO);
                 }
 
@@ -278,7 +278,6 @@ void BNO_init()
                          | I2C_MASTER_INT_DATA);
     IntEnable(INT_I2C0);
     I2CMasterEnable(I2C0_BASE);
-    g_CurrState=BNO_INIT;
 }
 
 
