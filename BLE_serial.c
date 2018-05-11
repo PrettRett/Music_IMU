@@ -114,12 +114,14 @@ void BLE_serialTask(void *pvParameters)
             // Disable the UART interrupt.  If we don't do this there is a race
             // condition which can cause the read index to be corrupted.
             //
-            UARTIntDisable(UART0_BASE, UART_INT_TX);
-            unsigned char end[]="\r\n";
-            unsigned char separation=';';
+            unsigned char *dataToSend;
 
             xSemaphoreTake(mut,portMAX_DELAY);
+            UARTIntDisable(UART0_BASE, UART_INT_TX);
             int i=0;
+
+            //--------------anterior intento---------------
+            /*
             int d=0;
             while(UARTSpaceAvail(UART0_BASE)&&(i<67) )
             {
@@ -143,7 +145,58 @@ void BLE_serialTask(void *pvParameters)
                 i++;
             }
             xQueueSend(xCharsForTx0,&end[0],portMAX_DELAY);
-            xQueueSend(xCharsForTx0,&end[1],portMAX_DELAY);
+            xQueueSend(xCharsForTx0,&end[1],portMAX_DELAY);*/
+
+            //se inicia la transmisión, debo de enviar los vectores de Quaterion, de Gravity y de Acceleración lineal
+            //como la transmisión va a ser de 14 bytes por vector ( 3 para nombrar cual enviamos, 3 int16, 1 ';' por cada int16 y un "\r\n"),
+            //excepto el quaterion que será de 17, por tanto, se enviarán 45 bytes
+            uint8_t send_uart=1;
+            while(i<45)
+            {
+                if(i>=40)
+                {
+                    uint8_t cmp=i%40;
+                    if(2==cmp)
+                        dataToSend=&separation;
+                    else if(2>cmp)
+                        dataToSend=&sensors_value.axis.MAGZ_MSB + cmp;
+                    else
+                        dataToSend=end+cmp-3;//el -3 es para que en caso de que llegue la primera, ponga el primer valor del array, y luego ya el segundo
+                    i++;
+
+                }
+                else if((i%14)<3)
+                {
+                    dataToSend=&nameVec[(i/14)*3+i%14];
+                    i++;
+                }
+                else if(((i%14)>=3)&&((i%14)<12))
+                {
+                    uint8_t cmp=(i%14) - 3;
+                    if(cmp>=9)
+                        dataToSend=end+cmp-9;
+                    else if(cmp%3==2)
+                        dataToSend=&separation;
+                    else
+                    {
+                        if(i/14==0)
+                        {
+
+                        }
+                    }
+                }
+
+                if(UARTSpaceAvail(UART0_BASE)&&send_uart)
+                {
+                    UARTCharPutNonBlocking(UART0_BASE,dataToSend);
+
+                }
+                else
+                {
+                    xQueueSend(xCharsForTx0,dataToSend,portMAX_DELAY);
+                }
+
+            }
 
 
             //

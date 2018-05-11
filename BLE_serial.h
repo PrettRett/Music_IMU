@@ -50,6 +50,9 @@ extern SemaphoreHandle_t mut;
 extern EventGroupHandle_t Signals;
 QueueHandle_t xRxedChars1, xCharsForTx1;
 
+unsigned char end[]="\r\n";
+unsigned char separation=';';
+unsigned char NameVec[]="GRAALNQUA";
 void BLE_serialTask(void *pvParameters);
 void UARTBLEinit();
 
