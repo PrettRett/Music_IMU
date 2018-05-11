@@ -31,7 +31,6 @@
 #include "driverlib/interrupt.h"
 #include "BNO055.h"
 
-#define USB_CONN
 #define QUEUE_LENGTH 80
 #define QUEUE_SIZE sizeof(uint8_t)
 
@@ -50,9 +49,7 @@ extern SemaphoreHandle_t mut;
 extern EventGroupHandle_t Signals;
 QueueHandle_t xRxedChars1, xCharsForTx1;
 
-unsigned char end[]="\r\n";
-unsigned char separation=';';
-unsigned char NameVec[]="GRAALNQUA";
+
 void BLE_serialTask(void *pvParameters);
 void UARTBLEinit();
 

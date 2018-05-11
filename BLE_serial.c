@@ -34,7 +34,7 @@ void BLE_serialTask(void *pvParameters)
                     com_count++;
                     if(com_count==5)
                     {
-                        xEventGroupSetBits(Signals,0x20);
+                        xEventGroupSetBits(Signals,READ_FLAG);
                         com_count=0;
                     }
                 }
@@ -76,7 +76,7 @@ void BLE_serialTask(void *pvParameters)
                     com_count++;
                     if(com_count==5)
                     {
-                        xEventGroupSetBits(Signals,0x20);
+                        xEventGroupSetBits(Signals,READ_FLAG);
                         com_count=0;
                     }
                 }
@@ -108,7 +108,9 @@ void BLE_serialTask(void *pvParameters)
         }
         if(aux & DATA_SEND_FLAG)
         {
-
+            unsigned char end[]="\r\n";
+            unsigned char separation=';';
+            unsigned char NameVec[]="GRAALNQUA";
 
             //
             // Disable the UART interrupt.  If we don't do this there is a race
@@ -159,18 +161,16 @@ void BLE_serialTask(void *pvParameters)
                     if(2==cmp)
                         dataToSend=&separation;
                     else if(2>cmp)
-                        dataToSend=&sensors_value.axis.MAGZ_MSB + cmp;
+                        dataToSend=&(sensors_value.axis.MAGZ_MSB) + cmp;
                     else
                         dataToSend=end+cmp-3;//el -3 es para que en caso de que llegue la primera, ponga el primer valor del array, y luego ya el segundo
-                    i++;
 
                 }
                 else if((i%14)<3)
                 {
-                    dataToSend=&nameVec[(i/14)*3+i%14];
-                    i++;
+                    dataToSend=&(NameVec[(i/14)*3+i%14]);
                 }
-                else if(((i%14)>=3)&&((i%14)<12))
+                else if((i%14)>=3)
                 {
                     uint8_t cmp=(i%14) - 3;
                     if(cmp>=9)
@@ -181,20 +181,29 @@ void BLE_serialTask(void *pvParameters)
                     {
                         if(i/14==0)
                         {
-
+                            dataToSend=&(sensors_value.axis.LINX_LSB) + cmp - cmp/3;
+                        }
+                        else if(i/14==1)
+                        {
+                            dataToSend=&(sensors_value.axis.GRAVX_LSB) + cmp - cmp/3;
+                        }
+                        else if(i/14==2)
+                        {
+                            dataToSend=&(sensors_value.axis.QUAX_LSB) + cmp - cmp/3;
                         }
                     }
                 }
 
-                if(UARTSpaceAvail(UART0_BASE)&&send_uart)
+                if(send_uart&&UARTSpaceAvail(UART0_BASE))
                 {
-                    UARTCharPutNonBlocking(UART0_BASE,dataToSend);
-
+                    UARTCharPutNonBlocking(UART0_BASE,*dataToSend);
                 }
                 else
                 {
+                    send_uart=0;
                     xQueueSend(xCharsForTx0,dataToSend,portMAX_DELAY);
                 }
+                i++;
 
             }
 

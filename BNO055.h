@@ -38,6 +38,7 @@
 #define STOP_FLAG 0x10
 #define ACK_DATA_FLAG 0x08
 #define READ_FLAG 0X20
+#define USB_CONN 1
 
 #define ACC_PARAM  0b0010000//(0b00|(0b100<<2))|(0b00<<5)) /* Range +-2G *//* Bandwith 125Hz*//* Normal operation mode */
 #define MAG_PARAM  0b0001011//(0b011|(0b01<<3))|(0b00<<5)) /* Output Rate 10Hz *//* Operation Mode Regular*//* Normal Power Mode */
@@ -331,56 +332,56 @@ typedef struct
 
         struct __attribute__((__packed__)) BNO_info
         {
-            uint8_t ACCX_LSB:8;
-            uint8_t ACCX_MSB:8;
-            uint8_t ACCY_LSB:8;
-            uint8_t ACCY_MSB:8;
-            uint8_t ACCZ_LSB:8;
-            uint8_t ACCZ_MSB:8;
+            uint8_t ACCX_LSB;
+            uint8_t ACCX_MSB;
+            uint8_t ACCY_LSB;
+            uint8_t ACCY_MSB;
+            uint8_t ACCZ_LSB;
+            uint8_t ACCZ_MSB;
 
-            uint8_t MAGX_LSB:8;
-            uint8_t MAGX_MSB:8;
-            uint8_t MAGY_LSB:8;
-            uint8_t MAGY_MSB:8;
-            uint8_t MAGZ_LSB:8;
-            uint8_t MAGZ_MSB:8;
+            uint8_t MAGX_LSB;
+            uint8_t MAGX_MSB;
+            uint8_t MAGY_LSB;
+            uint8_t MAGY_MSB;
+            uint8_t MAGZ_LSB;
+            uint8_t MAGZ_MSB;
 
-            uint8_t GYRX_LSB:8;
-            uint8_t GYRX_MSB:8;
-            uint8_t GYRY_LSB:8;
-            uint8_t GYRY_MSB:8;
-            uint8_t GYRZ_LSB:8;
-            uint8_t GYRZ_MSB:8;
+            uint8_t GYRX_LSB;
+            uint8_t GYRX_MSB;
+            uint8_t GYRY_LSB;
+            uint8_t GYRY_MSB;
+            uint8_t GYRZ_LSB;
+            uint8_t GYRZ_MSB;
 
-            uint8_t EULH_LSB:8;
-            uint8_t EULH_MSB:8;
-            uint8_t EULR_LSB:8;
-            uint8_t EULR_MSB:8;
-            uint8_t EULP_LSB:8;
-            uint8_t EULP_MSB:8;
+            uint8_t EULH_LSB;
+            uint8_t EULH_MSB;
+            uint8_t EULR_LSB;
+            uint8_t EULR_MSB;
+            uint8_t EULP_LSB;
+            uint8_t EULP_MSB;
 
-            uint8_t QUAW_LSB:8;
-            uint8_t QUAW_MSB:8;
-            uint8_t QUAX_LSB:8;
-            uint8_t QUAX_MSB:8;
-            uint8_t QUAY_LSB:8;
-            uint8_t QUAY_MSB:8;
-            uint8_t QUAZ_LSB:8;
-            uint8_t QUAZ_MSB:8;
+            uint8_t QUAW_LSB;
+            uint8_t QUAW_MSB;
+            uint8_t QUAX_LSB;
+            uint8_t QUAX_MSB;
+            uint8_t QUAY_LSB;
+            uint8_t QUAY_MSB;
+            uint8_t QUAZ_LSB;
+            uint8_t QUAZ_MSB;
 
-            uint8_t LINX_LSB:8;
-            uint8_t LINX_MSB:8;
-            uint8_t LINY_LSB:8;
-            uint8_t LINY_MSB:8;
-            uint8_t LINZ_LSB:8;
-            uint8_t LINZ_MSB:8;
+            uint8_t LINX_LSB;
+            uint8_t LINX_MSB;
+            uint8_t LINY_LSB;
+            uint8_t LINY_MSB;
+            uint8_t LINZ_LSB;
+            uint8_t LINZ_MSB;
 
-            uint8_t GRAVX_LSB:8;
-            uint8_t GRAVX_MSB:8;
-            uint8_t GRAVY_LSB:8;
-            uint8_t GRAVY_MSB:8;
-            uint8_t GRAVZ_LSB:8;
-            uint8_t GRAVZ_MSB:8;
+            uint8_t GRAVX_LSB;
+            uint8_t GRAVX_MSB;
+            uint8_t GRAVY_LSB;
+            uint8_t GRAVY_MSB;
+            uint8_t GRAVZ_LSB;
+            uint8_t GRAVZ_MSB;
         }axis;
     } AXIS_INFO;
     AXIS_INFO sensors_value;
