@@ -184,12 +184,15 @@ void BNO_COMM(void *pvParameters)
 
             case BNO_RDY:
                 g_PrevState = g_CurrState;
-                g_CurrState = BNO_READ;
                 mode_BNO=OPERATION_MODE_NDOF;
                 BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO);
 
 #ifdef USB_CONN //codigo de prueba pre-bluetooth
-                xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+                EventBits_t aux=xEventGroupWaitBits(Signals, READ_FLAG|CALIB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+                if(aux&READ_FLAG)
+                    g_CurrState=BNO_READ;
+                else if(aux&CALIB_FLAG)
+                    g_CurrState=BNO_CALIB;
 #else
                 vTaskDelay(portMAX_DELAY);
 #endif
@@ -235,7 +238,7 @@ void BNO_COMM(void *pvParameters)
                 }
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01)&READ_FLAG)
+                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.2)&READ_FLAG)
                     g_CurrState = BNO_RDY;
 
                 break;
@@ -244,6 +247,17 @@ void BNO_COMM(void *pvParameters)
 
             case BNO_CALIB:
                 g_PrevState = g_CurrState;
+                g_CurrState = BNO_RDY;
+
+                GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x02);
+                do{
+                    BNO_ReadRegister(BNO055_CALIB_STAT_ADDR,&reg,1);
+                }
+                while((reg<=0x1F)&&(xEventGroupWaitBits(Signals, CALIB_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)==0));
+                if(reg>=0x1F)
+                    GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x0E);
+                else
+                    GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x0E);
 
                 break;
 
@@ -278,6 +292,10 @@ void BNO_init()
                          | I2C_MASTER_INT_DATA);
     IntEnable(INT_I2C0);
     I2CMasterEnable(I2C0_BASE);
+
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
+    GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x00);
 }
 
 

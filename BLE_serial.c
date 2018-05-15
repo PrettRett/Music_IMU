@@ -13,8 +13,9 @@
 void BLE_serialTask(void *pvParameters)
 {
     unsigned char str;
-    unsigned char comm[]="XREAD";
-    uint8_t com_count=0;
+    unsigned char comm[2][6]={"XREAD","XCALI"};
+    uint8_t com_count1=0;
+    uint8_t com_count2=0;
 
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
     while(1)
@@ -29,17 +30,28 @@ void BLE_serialTask(void *pvParameters)
                 xQueueReceive(xRxedChars1,&str,portMAX_DELAY);
                 xQueueSend(xCharsForTx0,&str,portMAX_DELAY);
 
-                if(str==comm[com_count])
+                if(str==comm[0][com_count1])
                 {
-                    com_count++;
-                    if(com_count==5)
+                    com_count1++;
+                    if(com_count1==5)
                     {
                         xEventGroupSetBits(Signals,READ_FLAG);
-                        com_count=0;
+                        com_count1=0;
                     }
                 }
-                else if(com_count>0)
-                    com_count=0;
+                else if(com_count1>0)
+                    com_count1=0;
+                if(str==comm[1][com_count2])
+                {
+                    com_count2++;
+                    if(com_count2==5)
+                    {
+                        xEventGroupSetBits(Signals,CALIB_FLAG);
+                        com_count2=0;
+                    }
+                }
+                else if(com_count2>0)
+                    com_count2=0;
 
             }
             //
@@ -71,19 +83,31 @@ void BLE_serialTask(void *pvParameters)
                 xQueueReceive(xRxedChars0,&str,portMAX_DELAY);
                 xQueueSend(xCharsForTx1,&str,portMAX_DELAY);
 
-                if(str==comm[com_count])
+                if(str==comm[0][com_count1])
                 {
-                    com_count++;
-                    if(com_count==5)
+                    com_count1++;
+                    if(com_count1==5)
                     {
                         xEventGroupSetBits(Signals,READ_FLAG);
-                        com_count=0;
+                        com_count1=0;
                     }
                 }
-                else if(com_count>0)
-                    com_count=0;
+                else if(com_count1>0)
+                    com_count1=0;
+                if(str==comm[1][com_count2])
+                {
+                    com_count2++;
+                    if(com_count2==5)
+                    {
+                        xEventGroupSetBits(Signals,CALIB_FLAG);
+                        com_count2=0;
+                    }
+                }
+                else if(com_count2>0)
+                    com_count2=0;
 
             }
+
             //
             // Disable the UART interrupt.  If we don't do this there is a race
             // condition which can cause the read index to be corrupted.
@@ -287,7 +311,6 @@ void UARTBLEinit()
     //--------------------Habilitarel ENABLE del HM-10-------------------
     GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE,GPIO_PIN_4);
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
-    while(GPIOPinRead(GPIO_PORTB_BASE,GPIO_PIN_5));
 }
 
 

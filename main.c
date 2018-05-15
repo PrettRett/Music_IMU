@@ -71,6 +71,7 @@ void main()
     SysCtlPeripheralClockGating(true);
 
 
+
     //
     // Inicializa la UARTy la configura a 115.200 bps, 8-N-1 .
     //se usa para mandar y recibir mensajes y comandos por el puerto serie
