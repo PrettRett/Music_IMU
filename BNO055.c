@@ -238,7 +238,7 @@ void BNO_COMM(void *pvParameters)
                 }
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.2)&READ_FLAG)
+                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.05)&READ_FLAG)
                     g_CurrState = BNO_RDY;
 
                 break;
