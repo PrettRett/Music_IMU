@@ -185,7 +185,7 @@ void BLE_serialTask(void *pvParameters)
                     if(2==cmp)
                         dataToSend=&separation;
                     else if(2>cmp)
-                        dataToSend=&(sensors_value.axis.MAGZ_MSB) + cmp;
+                        dataToSend=&(sensors_value.axis.QUAW_LSB) + cmp;
                     else
                         dataToSend=end+cmp-3;//el -3 es para que en caso de que llegue la primera, ponga el primer valor del array, y luego ya el segundo
 
@@ -205,11 +205,11 @@ void BLE_serialTask(void *pvParameters)
                     {
                         if(i/14==0)
                         {
-                            dataToSend=&(sensors_value.axis.LINX_LSB) + cmp - cmp/3;
+                            dataToSend=&(sensors_value.axis.GRAVX_LSB) + cmp - cmp/3;
                         }
                         else if(i/14==1)
                         {
-                            dataToSend=&(sensors_value.axis.GRAVX_LSB) + cmp - cmp/3;
+                            dataToSend=&(sensors_value.axis.LINX_LSB) + cmp - cmp/3;
                         }
                         else if(i/14==2)
                         {
