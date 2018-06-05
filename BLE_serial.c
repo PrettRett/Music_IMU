@@ -134,7 +134,7 @@ void BLE_serialTask(void *pvParameters)
         {
             unsigned char end[]="\r\n";
             unsigned char separation=';';
-            unsigned char NameVec[]="GRAALNQUA";
+            unsigned char NameVec[]="GAQ";
 
             //
             // Disable the UART interrupt.  If we don't do this there is a race
@@ -173,45 +173,58 @@ void BLE_serialTask(void *pvParameters)
             xQueueSend(xCharsForTx0,&end[0],portMAX_DELAY);
             xQueueSend(xCharsForTx0,&end[1],portMAX_DELAY);*/
 
-            //se inicia la transmisión, debo de enviar los vectores de Quaterion, de Gravity y de Acceleración lineal
-            //como la transmisión va a ser de 14 bytes por vector ( 3 para nombrar cual enviamos, 3 int16, 1 ';' por cada int16 y un "\r\n"),
-            //excepto el quaterion que será de 17, por tanto, se enviarán 45 bytes
+            //se inicia la transmisión, debo de enviar los vectores de Quaterion, de Gravity, de Acceleración lineal y del tiempo
+            //como la transmisión va a ser de 11 bytes por vector ( 1 para nombrar cual enviamos, 3 int16, 1 ';' por cada int16 y un "\n"),
+            //excepto el quaterion que será de 14 y el tiempo que será de 7 bytes, por tanto, se enviarán 45 bytes
             uint8_t send_uart=1;
-            while(i<45)
+            while(i<44)
             {
-                if(i>=40)
+                if(i>=38)
                 {
-                    uint8_t cmp=i%40;
+                    uint8_t cmp=i%38;
+                    if(5==cmp)
+                        dataToSend=&separation;
+                    else if(0==cmp)
+                        dataToSend=NameVec+3;
+                    else if(5>cmp)
+                        dataToSend=&(sensors_value.axis.QUAW_LSB) + cmp;
+                    else
+                        dataToSend=end+cmp-6;
+
+                }
+                else if(i>=33)
+                {
+                    uint8_t cmp=i%33;
                     if(2==cmp)
                         dataToSend=&separation;
                     else if(2>cmp)
                         dataToSend=&(sensors_value.axis.QUAW_LSB) + cmp;
                     else
-                        dataToSend=end+cmp-3;//el -3 es para que en caso de que llegue la primera, ponga el primer valor del array, y luego ya el segundo
+                        dataToSend=end+cmp-2;
 
                 }
-                else if((i%14)<3)
+                else if((i%11)==0)
                 {
-                    dataToSend=&(NameVec[(i/14)*3+i%14]);
+                    dataToSend=&(NameVec[(i/11)]);
                 }
-                else if((i%14)>=3)
+                else if((i%11)>=1)
                 {
-                    uint8_t cmp=(i%14) - 3;
+                    uint8_t cmp=(i%11) - 1;
                     if(cmp>=9)
-                        dataToSend=end+cmp-9;
+                        dataToSend=end+1;
                     else if(cmp%3==2)
                         dataToSend=&separation;
                     else
                     {
-                        if(i/14==0)
+                        if(i/11==0)
                         {
                             dataToSend=&(sensors_value.axis.GRAVX_LSB) + cmp - cmp/3;
                         }
-                        else if(i/14==1)
+                        else if(i/11==1)
                         {
                             dataToSend=&(sensors_value.axis.LINX_LSB) + cmp - cmp/3;
                         }
-                        else if(i/14==2)
+                        else if(i/11==2)
                         {
                             dataToSend=&(sensors_value.axis.QUAX_LSB) + cmp - cmp/3;
                         }

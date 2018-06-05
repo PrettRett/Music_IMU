@@ -28,6 +28,7 @@
 #include "driverlib/rom_map.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/i2c.h"
+#include "driverlib/timer.h"
 #include "driverlib/interrupt.h"
 
 #define NUM_BNO055_OFFSET_REGISTERS (22)
@@ -328,6 +329,8 @@ typedef struct
     } adafruit_vector_type_t;
 
     extern uint8_t mode_BNO;
+    uint8_t part_read[45];
+    uint8_t mean_read[45];
     typedef union {
         uint8_t mult_read[45];
 

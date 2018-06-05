@@ -208,11 +208,21 @@ void BNO_COMM(void *pvParameters)
 
             case BNO_READ:
                 g_PrevState = g_CurrState;
-                xSemaphoreTake(mut,portMAX_DELAY);
-                /* Código para leer los registros necesarios */
-                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,&(sensors_value.mult_read[0]),45)<0)
+                /* Código para leer todos los registros de salida del BNO */
+                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,part_read,45)<0)
                     g_CurrState = ERROR;
-
+                vTaskDelay(configTICK_RATE_HZ*0.01);
+                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,mean_read,45)<0)
+                    g_CurrState = ERROR;
+                int i;
+                for(i=0;i<23;i++)
+                {
+                    int16_t *n1=(int16_t*)part_read;
+                    int16_t *n2=(int16_t*)mean_read;
+                    n2[i]=(n2[i]+n1[i])/2;
+                }
+                xSemaphoreTake(mut,portMAX_DELAY);
+                memcpy(sensors_value.mult_read,mean_read,sizeof(mean_read));
                 //---------Código previo(poco optimizado)--------------
 /*                int i, s;
                 s=pdTRUE;
@@ -296,6 +306,20 @@ void BNO_init()
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
     GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x00);
+
+    //Timer para enviar el tiempo de la lectura
+
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_TIMER0);
+    TimerClockSourceSet(TIMER0_BASE,TIMER_CLOCK_SYSTEM);
+    // Configura el Timer0 para cuenta periodica de 32 bits (no lo separa en TIMER0A y TIMER0B)
+    TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
+
+    // Periodo de cuenta de 0.05s. SysCtlClockGet() te proporciona la frecuencia del reloj del sistema, por lo que una cuenta
+    // del Timer a SysCtlClockGet() tardara 1 segundo, a 0.5*SysCtlClockGet(), 0.5seg, etc...
+    uint32_t ui32Period = SysCtlClockGet();
+    // Carga la cuenta en el Timer0A
+    TimerLoadSet(TIMER0_BASE, TIMER_A, ui32Period -1);
 }
 
 
