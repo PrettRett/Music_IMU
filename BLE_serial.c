@@ -177,7 +177,7 @@ void BLE_serialTask(void *pvParameters)
             //como la transmisión va a ser de 11 bytes por vector ( 1 para nombrar cual enviamos, 3 int16, 1 ';' por cada int16 y un "\n"),
             //excepto el quaterion que será de 14 y el tiempo que será de 7 bytes, por tanto, se enviarán 45 bytes
             uint8_t send_uart=1;
-            while(i<44)
+            while(i<36)
             {
                 if(i>=38)
                 {
@@ -192,9 +192,9 @@ void BLE_serialTask(void *pvParameters)
                         dataToSend=end+cmp-6;
 
                 }
-                else if(i>=33)
+                else if(i>=32)
                 {
-                    uint8_t cmp=i%33;
+                    uint8_t cmp=i%32;
                     if(2==cmp)
                         dataToSend=&separation;
                     else if(2>cmp)

@@ -243,8 +243,8 @@ void BNO_COMM(void *pvParameters)
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR, &mode_BNO,1);
                 if(mode_BNO!=prev_mode)
                 {
-                    mode_BNO=prev_mode;
-                    BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO);
+                    g_CurrState=ERROR;
+                    break;
                 }
 
                 /* Código para parar la lectura y pasar a modo RDY */
@@ -273,7 +273,11 @@ void BNO_COMM(void *pvParameters)
 
 
             case ERROR:
-                g_CurrState = ERROR;
+                if(g_PrevState==BNO_RDY || g_PrevState==BNO_READ || g_PrevState==BNO_CALIB)
+                    g_CurrState=BNO_CONF;
+                else
+                    g_CurrState=BNO_INIT;
+                g_PrevState=ERROR;
                 break;
 
 
