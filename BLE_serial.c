@@ -134,7 +134,7 @@ void BLE_serialTask(void *pvParameters)
         {
             unsigned char end[]="\r\n";
             unsigned char separation=';';
-            unsigned char NameVec[]="GAQ";
+            unsigned char NameVec[]="GAQT";
 
             //
             // Disable the UART interrupt.  If we don't do this there is a race
@@ -177,17 +177,17 @@ void BLE_serialTask(void *pvParameters)
             //como la transmisión va a ser de 11 bytes por vector ( 1 para nombrar cual enviamos, 3 int16, 1 ';' por cada int16 y un "\n"),
             //excepto el quaterion que será de 14 y el tiempo que será de 7 bytes, por tanto, se enviarán 45 bytes
             uint8_t send_uart=1;
-            while(i<36)
+            while(i<44)
             {
-                if(i>=38)
+                if(i>=36)
                 {
-                    uint8_t cmp=i%38;
+                    uint8_t cmp=i%36;
                     if(5==cmp)
                         dataToSend=&separation;
                     else if(0==cmp)
                         dataToSend=NameVec+3;
                     else if(5>cmp)
-                        dataToSend=&(sensors_value.axis.QUAW_LSB) + cmp;
+                        dataToSend=&read_time + cmp -1;
                     else
                         dataToSend=end+cmp-6;
 
@@ -200,7 +200,7 @@ void BLE_serialTask(void *pvParameters)
                     else if(2>cmp)
                         dataToSend=&(sensors_value.axis.QUAW_LSB) + cmp;
                     else
-                        dataToSend=end+cmp-2;
+                        dataToSend=end+1;
 
                 }
                 else if((i%11)==0)

@@ -331,6 +331,7 @@ typedef struct
     extern uint8_t mode_BNO;
     uint8_t part_read[45];
     uint8_t mean_read[45];
+    uint32_t read_time;
     typedef union {
         uint8_t mult_read[45];
 
