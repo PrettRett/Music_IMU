@@ -213,17 +213,17 @@ void BNO_COMM(void *pvParameters)
             case BNO_READ:
                 g_PrevState = g_CurrState;
                 /* Código para leer todos los registros de salida del BNO */
-                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,part_read,45)<0)
+                if(BNO_ReadRegister(BNO055_QUATERNION_DATA_W_LSB_ADDR,part_read+24,20)<0)
                     g_CurrState = ERROR;
 
-                vTaskDelay(configTICK_RATE_HZ*0.01);
+                vTaskDelay(configTICK_RATE_HZ*0.006);
 
                 // Hacemos ahora la lectura del timer, y reiniciamos la cuenta para saber cuanto
                 // es el tiempo entre que se capturan las lecturas de media.
                 read_time=SysCtlClockGet()-TimerValueGet(TIMER0_BASE, TIMER_A);
                 TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet()-1);
 
-                if(BNO_ReadRegister(BNO055_ACCEL_DATA_X_LSB_ADDR,mean_read,45)<0)
+                if(BNO_ReadRegister(BNO055_QUATERNION_DATA_W_LSB_ADDR,mean_read+24,20)<0)
                     g_CurrState = ERROR;
                 int16_t *n1=(int16_t*)part_read;
                 int16_t *n2=(int16_t*)mean_read;

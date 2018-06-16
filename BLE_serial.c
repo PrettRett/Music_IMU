@@ -187,7 +187,10 @@ void BLE_serialTask(void *pvParameters)
                     else if(0==cmp)
                         dataToSend=NameVec+3;
                     else if(5>cmp)
-                        dataToSend=&read_time + cmp -1;
+                    {
+                        dataToSend=&read_time;
+                        dataToSend=dataToSend+cmp-1;
+                    }
                     else
                         dataToSend=end+cmp-6;
 
