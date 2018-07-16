@@ -48,6 +48,7 @@ extern uint8_t mode_BNO;
 extern SemaphoreHandle_t mut;
 extern EventGroupHandle_t Signals;
 QueueHandle_t xRxedChars1, xCharsForTx1;
+uint8_t buttonPressed;
 
 
 void BLE_serialTask(void *pvParameters);
@@ -55,5 +56,7 @@ void UARTBLEinit();
 
 void UART1IntHandler();
 void UART0IntHandler();
+
+void ButtonStopHandler();
 
 #endif /* BLE_SERIAL_H_ */

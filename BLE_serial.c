@@ -22,7 +22,6 @@ void BLE_serialTask(void *pvParameters)
     {
         EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG|DATA_SEND_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
-#ifdef USB_CONN
         if((aux & BLE_FLAG)==BLE_FLAG)
         {
             while(uxQueueMessagesWaiting(xRxedChars1)&&uxQueueSpacesAvailable(xCharsForTx0))
@@ -76,6 +75,7 @@ void BLE_serialTask(void *pvParameters)
             //
             MAP_UARTIntEnable(UART1_BASE, UART_INT_TX);
         }
+#ifdef USB_CONN
         if((aux & USB_FLAG)==USB_FLAG)
         {
             while(uxQueueMessagesWaiting(xRxedChars0)&&uxQueueSpacesAvailable(xCharsForTx1))
@@ -130,11 +130,12 @@ void BLE_serialTask(void *pvParameters)
             //
             MAP_UARTIntEnable(UART0_BASE, UART_INT_TX);
         }
+#endif
         if(aux & DATA_SEND_FLAG)
         {
             unsigned char end[]="\r\n";
             unsigned char separation=';';
-            unsigned char NameVec[]="GAQT";
+            unsigned char NameVec[]="GAQPT";
 
             //
             // Disable the UART interrupt.  If we don't do this there is a race
@@ -177,22 +178,35 @@ void BLE_serialTask(void *pvParameters)
             //como la transmisión va a ser de 11 bytes por vector ( 1 para nombrar cual enviamos, 3 int16, 1 ';' por cada int16 y un "\n"),
             //excepto el quaterion que será de 14 y el tiempo que será de 7 bytes, por tanto, se enviarán 45 bytes
             uint8_t send_uart=1;
-            while(i<44)
+            while(i<48)
             {
-                if(i>=36)
+                if(i>=40)
                 {
-                    uint8_t cmp=i%36;
+                    uint8_t cmp=i%40;
                     if(5==cmp)
                         dataToSend=&separation;
                     else if(0==cmp)
-                        dataToSend=NameVec+3;
+                        dataToSend=NameVec+4;
                     else if(5>cmp)
                     {
-                        dataToSend=&read_time;
+                        dataToSend=(uint8_t *)&read_time;
                         dataToSend=dataToSend+cmp-1;
                     }
                     else
                         dataToSend=end+cmp-6;
+
+                }
+                else if(i>=36)
+                {
+                    uint8_t cmp=i%36;
+                    if(2==cmp)
+                        dataToSend=&separation;
+                    else if(0==cmp)
+                        dataToSend=NameVec+3;
+                    else if(1==cmp)
+                        dataToSend=&buttonPressed;
+                    else
+                        dataToSend=end+1;
 
                 }
                 else if(i>=32)
@@ -256,7 +270,6 @@ void BLE_serialTask(void *pvParameters)
 
         }
 
-#endif
     }
 }
 
@@ -324,9 +337,17 @@ void UARTBLEinit()
     IntEnable(INT_UART1);
     UARTEnable(UART1_BASE);
 
-    //--------------------Habilitarel ENABLE del HM-10-------------------
+    //--------------------Habilitar el ENABLE del HM-10-------------------
     GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE,GPIO_PIN_4);
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
+
+    //boton para señalizar el movimiento
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOF);
+    GPIOPinTypeGPIOInput(GPIO_PORTF_BASE,GPIO_PIN_4);
+    GPIOIntTypeSet(GPIO_PORTF_BASE, GPIO_PIN_4, GPIO_BOTH_EDGES);
+    GPIOIntClear(GPIO_PORTF_BASE,GPIO_PIN_4);
+    GPIOIntEnable(GPIO_PORTF_BASE,GPIO_PIN_4);
 }
 
 
@@ -474,3 +495,9 @@ void UART0IntHandler()
     UARTIntClear(UART0_BASE,(UARTIntStatus(UART0_BASE,pdTRUE)));
 }
 #endif
+
+void ButtonStopHandler()
+{
+    buttonPressed=(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4)>>4);
+    GPIOIntClear(GPIO_PORTF_BASE,GPIO_PIN_4);
+}
