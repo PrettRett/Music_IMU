@@ -186,8 +186,6 @@ void BNO_COMM(void *pvParameters)
                 g_PrevState = g_CurrState;
                 mode_BNO=OPERATION_MODE_NDOF;
                 BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO);
-
-#ifdef USB_CONN //codigo de prueba pre-bluetooth
                 EventBits_t aux=xEventGroupWaitBits(Signals, READ_FLAG|CALIB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
                 if(aux&READ_FLAG)
                 {
@@ -197,9 +195,6 @@ void BNO_COMM(void *pvParameters)
                 }
                 else if(aux&CALIB_FLAG)
                     g_CurrState=BNO_CALIB;
-#else
-                vTaskDelay(portMAX_DELAY);
-#endif
                 /* Código para pasar a modo lectura */
 
 

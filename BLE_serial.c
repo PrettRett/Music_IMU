@@ -345,9 +345,12 @@ void UARTBLEinit()
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOInput(GPIO_PORTF_BASE,GPIO_PIN_4);
+    GPIOPadConfigSet(GPIO_PORTF_BASE,GPIO_PIN_4,GPIO_STRENGTH_2MA,GPIO_PIN_TYPE_STD_WPU);
     GPIOIntTypeSet(GPIO_PORTF_BASE, GPIO_PIN_4, GPIO_BOTH_EDGES);
     GPIOIntClear(GPIO_PORTF_BASE,GPIO_PIN_4);
     GPIOIntEnable(GPIO_PORTF_BASE,GPIO_PIN_4);
+    IntEnable(INT_GPIOF);
+    buttonPressed=!(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4)>>4);
 }
 
 
@@ -498,6 +501,6 @@ void UART0IntHandler()
 
 void ButtonStopHandler()
 {
-    buttonPressed=(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4)>>4);
+    buttonPressed=!(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4)>>4);
     GPIOIntClear(GPIO_PORTF_BASE,GPIO_PIN_4);
 }
