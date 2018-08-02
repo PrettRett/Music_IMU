@@ -255,7 +255,13 @@ void BLE_serialTask(void *pvParameters)
                 else
                 {
                     send_uart=0;
-                    xQueueSend(xCharsForTx0,dataToSend,portMAX_DELAY);
+                    BaseType_t xResult=xQueueSend(xCharsForTx0,dataToSend,configTICK_RATE_HZ*0.01);
+                    //codigo extra para cuando se pierdan datos
+                    if(xResult==errQUEUE_FULL)
+                    {
+                        i=48;
+                        //avisamos cuando no se ha conseguido enviar
+                    }
                 }
                 i++;
 
