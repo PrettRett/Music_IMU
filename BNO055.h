@@ -40,7 +40,7 @@
 #define ACK_DATA_FLAG 0x08
 #define READ_FLAG 0X20
 #define CALIB_FLAG 0X80
-#define USB_CONN 1
+#define NSENT_FLAG 0X100
 
 #define ACC_PARAM  0b0010000//(0b00|(0b100<<2))|(0b00<<5)) /* Range +-2G *//* Bandwith 125Hz*//* Normal operation mode */
 #define MAG_PARAM  0b0001011//(0b011|(0b01<<3))|(0b00<<5)) /* Output Rate 10Hz *//* Operation Mode Regular*//* Normal Power Mode */

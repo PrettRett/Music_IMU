@@ -215,6 +215,7 @@ void BNO_COMM(void *pvParameters)
 
                 // Hacemos ahora la lectura del timer, y reiniciamos la cuenta para saber cuanto
                 // es el tiempo entre que se capturan las lecturas de media.
+                int tt=read_time
                 read_time=SysCtlClockGet()-TimerValueGet(TIMER0_BASE, TIMER_A);
                 TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet()-1);
 
@@ -228,6 +229,10 @@ void BNO_COMM(void *pvParameters)
                     n2[i]=(n2[i]+n1[i])/2;
                 }
                 xSemaphoreTake(mut,portMAX_DELAY);
+                if(xEventGroupWaitBits(Signals, NSENT_FLAG, pdTRUE, pdFALSE, 0)&NSENT_FLAG)
+                {
+                    read_time+=tt;
+                }
                 memcpy(sensors_value.mult_read,mean_read,sizeof(mean_read));
                 //---------Código previo(poco optimizado)--------------
 /*                int i, s;
