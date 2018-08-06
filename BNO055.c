@@ -215,7 +215,7 @@ void BNO_COMM(void *pvParameters)
 
                 // Hacemos ahora la lectura del timer, y reiniciamos la cuenta para saber cuanto
                 // es el tiempo entre que se capturan las lecturas de media.
-                int tt=read_time
+                int tt=read_time;
                 read_time=SysCtlClockGet()-TimerValueGet(TIMER0_BASE, TIMER_A);
                 TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet()-1);
 
