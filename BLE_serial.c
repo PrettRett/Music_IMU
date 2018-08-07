@@ -152,6 +152,8 @@ void BLE_serialTask(void *pvParameters)
             unsigned char *dataToSend;
 
             xSemaphoreTake(mut,portMAX_DELAY);
+            if(buttonPressed==1)
+                read_time=0;
 #ifdef USB_CONN
             UARTIntDisable(UART0_BASE, UART_INT_TX);
 #else
@@ -190,62 +192,48 @@ void BLE_serialTask(void *pvParameters)
             //como la transmisión va a ser de 11 bytes por vector ( 1 para nombrar cual enviamos, 3 int16, 1 ';' por cada int16 y un "\n"),
             //excepto el quaterion que será de 14 y el tiempo que será de 7 bytes, por tanto, se enviarán 45 bytes
             uint8_t send_uart=1;
-            while(i<35)
+
+            while(i<19)
             {
-                if(i>=30)
+                if(i>=16)
                 {
-                    uint8_t cmp=i%30;
+                    uint8_t cmp=i%16;
                     if(0==cmp)
                         dataToSend=NameVec+4;
-                    else if(5>cmp)
+                    else if(3>cmp)
                     {
                         dataToSend=(uint8_t *)&read_time;
                         dataToSend=dataToSend+cmp-1;
                     }
                     else
-                        dataToSend=end+cmp-6;
-
-                }
-                else if(i>=27)
-                {
-                    uint8_t cmp=i%27;
-                    if(0==cmp)
-                        dataToSend=NameVec+3;
-                    else if(1==cmp)
-                        dataToSend=&buttonPressed;
-                    else
                         dataToSend=end+1;
 
                 }
-                else if(i>=23)
+                else if(i>=14)
                 {
-                    uint8_t cmp=i%23;
+                    uint8_t cmp=i%14;
                     if(2>cmp)
                         dataToSend=&(sensors_value.axis.QUAW_LSB) + cmp;
                     else
                         dataToSend=end+1;
 
                 }
-                else if((i%8)==0)
+                else if((i%7)==0)
                 {
-                    dataToSend=&(NameVec[(i/8)]);
+                    dataToSend=&(NameVec[(i/7)+1]);
                 }
-                else if((i%8)>=1)
+                else if((i%7)>=1)
                 {
-                    uint8_t cmp=(i%8) - 1;
-                    if(cmp>=6)
+                    uint8_t cmp=(i%7) - 1;
+                    if(cmp==6)
                         dataToSend=end+1;
                     else
                     {
-                        if(i/8==0)
-                        {
-                            dataToSend=&(sensors_value.axis.GRAVX_LSB) + cmp - cmp/3;
-                        }
-                        else if(i/8==1)
+                        if(i/7==0)
                         {
                             dataToSend=&(sensors_value.axis.LINX_LSB) + cmp - cmp/3;
                         }
-                        else if(i/8==2)
+                        else if(i/7==1)
                         {
                             dataToSend=&(sensors_value.axis.QUAX_LSB) + cmp - cmp/3;
                         }
