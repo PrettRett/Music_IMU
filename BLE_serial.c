@@ -10,12 +10,19 @@
 #include "event_groups.h"
 #include "driverlib/uart.h"
 
+//variables para el envío de la trama
+
+unsigned char end[]="\r\n";
+unsigned char separation=';';
+unsigned char NameVec[]="GAQPT";
+
 void BLE_serialTask(void *pvParameters)
 {
-    unsigned char str;
-    unsigned char comm[2][6]={"XREAD","XCALI"};
-    uint8_t com_count1=0;
-    uint8_t com_count2=0;
+    unsigned char str[30];
+    unsigned char comm[7][8]={"XREAD","XCALI","OK+CONN","OK+LOST","G\n","A\n","Q\n"};
+    BLE_state=INIT;
+    /*uint8_t com_count1=0;
+    uint8_t com_count2=0;*/
 
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
     while(1)
@@ -34,7 +41,8 @@ void BLE_serialTask(void *pvParameters)
 #ifdef USB_CONN
                 xQueueSend(xCharsForTx0,&str,portMAX_DELAY);
 #endif
-
+                /*  //Codigo en caso de que se reciba caracter a caracter, como no va a ser el caso,
+                 *   se escogerá una opción más optimizada que permitirá tener una máquina de estados
                 if(str==comm[0][com_count1])
                 {
                     com_count1++;
@@ -56,9 +64,10 @@ void BLE_serialTask(void *pvParameters)
                     }
                 }
                 else if(com_count2>0)
-                    com_count2=0;
+                    com_count2=0;*/
 
             }
+
             //
             // Disable the UART interrupt.  If we don't do this there is a race
             // condition which can cause the read index to be corrupted.
@@ -82,6 +91,58 @@ void BLE_serialTask(void *pvParameters)
             // Reenable the UART interrupt.
             //
             MAP_UARTIntEnable(UART1_BASE, UART_INT_TX);
+            switch(BLE_state)
+            {
+            case INIT:
+                if(0==memcmp(str,comm[2],7))
+                {
+                    BLE_state=CONNECTED;
+                }
+                break;
+            case CONNECTED:
+                if(0==memcmp(str,comm[0],5))
+                {
+                    BLE_state=SENDING;
+                    xEventGroupSetBits(Signals,READ_FLAG);
+                }
+                else if((0==memcmp(str,comm[1],5)))
+                {
+                    BLE_state=CALIBRATING;
+                    xEventGroupSetBits(Signals,CALIB_FLAG);
+                }
+                else if((0==memcmp(str,comm[3],7)))
+                {
+                    BLE_state=INIT;
+                }
+                break;
+            case SENDING:
+                if(0==memcmp(str,comm[0],7))
+                {
+                    BLE_state=CONNECTED;
+                    xEventGroupSetBits(Signals,READ_FLAG);
+                }
+                else if((0==memcmp(str,comm[4],2)))
+                {
+
+                }
+                else if((0==memcmp(str,comm[5],2)))
+                {
+
+                }
+                else if((0==memcmp(str,comm[6],2)))
+                {
+
+                }
+                else if((0==memcmp(str,comm[3],7)))
+                {
+                    BLE_state=INIT;
+                    xEventGroupSetBits(Signals,READ_FLAG);
+                }
+                break;
+            case CALIBRATING:
+            default:
+                break;
+            }
         }
 #ifdef USB_CONN
         if((aux & USB_FLAG)==USB_FLAG)
@@ -141,9 +202,6 @@ void BLE_serialTask(void *pvParameters)
 #endif
         if(aux & DATA_SEND_FLAG)
         {
-            unsigned char end[]="\r\n";
-            unsigned char separation=';';
-            unsigned char NameVec[]="GAQPT";
 
             //
             // Disable the UART interrupt.  If we don't do this there is a race
@@ -258,7 +316,17 @@ void BLE_serialTask(void *pvParameters)
                             dataToSend=&(sensors_value.axis.QUAX_LSB) + cmp - cmp/3;
                         }
                     }
-                }
+                }/*//idea equivocada
+                if(i==0)
+                    BLEChangeChar("FFE1");
+                else if(i==11)
+                    BLEChangeChar("FFE2");
+                else if(i==22)
+                    BLEChangeChar("FFE3");
+                else if(i==36)
+                    BLEChangeChar("FFE4");
+                else if(i==40)
+                    BLEChangeChar("FFE5");*/
 #ifdef USB_CONN
                 if(send_uart&&UARTSpaceAvail(UART0_BASE))
                 {
@@ -309,6 +377,103 @@ void BLE_serialTask(void *pvParameters)
             MAP_UARTIntEnable(UART1_BASE, UART_INT_TX);
 #endif
 
+        }
+
+    }
+}
+/*//Idea equivocada
+void BLEChangeChar(uint8_t *C_ar)
+{
+    uint8_t str[] = "AT+CHAR0x0000";
+    int i;
+    for(i=0;i<4;i++)
+        str[9+i]=C_ar[i];
+    int send_uart=1;
+    for(i=0;i<sizeof(str);i++)
+    {
+            if(send_uart&&UARTSpaceAvail(UART1_BASE))
+            {
+                UARTCharPutNonBlocking(UART1_BASE,str+i);
+            }
+            else
+            {
+                send_uart=0;
+                BaseType_t xResult=xQueueSend(xCharsForTx1,str+i,configTICK_RATE_HZ*0.01);
+                //codigo extra para cuando se pierdan datos
+                if(xResult==errQUEUE_FULL)
+                {
+                    break;
+                }
+            }
+    }
+}*/
+
+void BLESendBNOInfo(uint8_t initial)
+{
+    uint8_t *dataToSend, *initial_reg, cmp;
+    uint8_t i=0;
+    uint8_t fin=20;
+    uint8_t send_uart=1;
+    if(initial=='G')
+    {
+        initial_reg=&(sensors_value.axis.GRAVX_LSB);
+        fin=23;
+    }
+    else if(initial=='A')
+        initial_reg=&(sensors_value.axis.LINX_LSB);
+    else if(initial=='Q')
+        initial_reg=&(sensors_value.axis.QUAX_LSB);
+    while(i<fin)
+    {
+        if(0==i)
+            dataToSend=&initial;
+        else if(i<(10+(fin%20)))
+        {
+            cmp = i%3;
+            if(0==cmp)
+                dataToSend=&separation;
+            else
+                dataToSend=initial_reg++;
+        }
+        else if(i<(16+(fin%20)))
+        {
+            cmp=i%(10+(fin%20));
+            if(0==cmp)
+                dataToSend=NameVec+4;
+            else if(5>cmp)
+            {
+                dataToSend=(uint8_t *)&read_time;
+                dataToSend=dataToSend+cmp-1;
+            }
+            else
+                dataToSend=&separation;
+        }
+        else
+        {
+            cmp=cmp=i%(16+(fin%20));
+            if(0==cmp)
+                dataToSend=NameVec+3;
+            else if(2>cmp)
+                dataToSend=&buttonPressed;
+            else
+                dataToSend=&separation;
+        }
+
+        if(send_uart&&UARTSpaceAvail(UART1_BASE))
+        {
+            UARTCharPutNonBlocking(UART1_BASE,*dataToSend);
+        }
+        else
+        {
+            send_uart=0;
+            BaseType_t xResult=xQueueSend(xCharsForTx1,dataToSend,configTICK_RATE_HZ*0.01);
+            //codigo extra para cuando se pierdan datos
+            if(xResult==errQUEUE_FULL)
+            {
+                i=48;
+                xEventGroupSetBits(Signals,NSENT_FLAG);
+                //avisamos cuando no se ha conseguido enviar
+            }
         }
 
     }

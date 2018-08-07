@@ -22,6 +22,8 @@
 #include "inc/hw_ints.h"
 #include "stdbool.h"
 #include "stdint.h"
+#include "stdlib.h"
+#include "string.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/rom.h"
@@ -44,15 +46,24 @@
     #define USB_FLAG 0x00
 #endif
 
+enum {
+    INIT,
+    CONNECTED,
+    SENDING,
+    CALIBRATING
+}BLE_state;
+
 extern uint8_t mode_BNO;
 extern SemaphoreHandle_t mut;
 extern EventGroupHandle_t Signals;
 QueueHandle_t xRxedChars1, xCharsForTx1;
 uint8_t buttonPressed;
 
-
 void BLE_serialTask(void *pvParameters);
 void UARTBLEinit();
+
+//void BLEChangeChar(uint8_t*); idea equivocada
+void BLESendBNOInfo(uint8_t);
 
 void UART1IntHandler();
 void UART0IntHandler();
