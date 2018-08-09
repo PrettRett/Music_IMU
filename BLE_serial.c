@@ -24,9 +24,15 @@ void BLE_serialTask(void *pvParameters)
         GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
         if((aux & BLE_FLAG)==BLE_FLAG)
         {
+#ifdef USB_CONN
             while(uxQueueMessagesWaiting(xRxedChars1)&&uxQueueSpacesAvailable(xCharsForTx0))
+#else
+            while(uxQueueMessagesWaiting(xRxedChars1))
+#endif
             {
+#ifdef USB_CONN
                 xQueueReceive(xRxedChars1,&str,portMAX_DELAY);
+#endif
                 xQueueSend(xCharsForTx0,&str,portMAX_DELAY);
 
                 if(str==comm[0][com_count1])
@@ -146,7 +152,11 @@ void BLE_serialTask(void *pvParameters)
             unsigned char *dataToSend;
 
             xSemaphoreTake(mut,portMAX_DELAY);
+#ifdef USB_CONN
             UARTIntDisable(UART0_BASE, UART_INT_TX);
+#else
+            UARTIntDisable(UART1_BASE, UART_INT_TX);
+#endif
             int i=0;
 
             //--------------anterior intento---------------
@@ -278,7 +288,6 @@ void BLE_serialTask(void *pvParameters)
                     if(xResult==errQUEUE_FULL)
                     {
                         i=48;
-                        xEventGroupSetBits(Signals,NSENT_FLAG);
                         //avisamos cuando no se ha conseguido enviar
                     }
                 }
@@ -292,7 +301,11 @@ void BLE_serialTask(void *pvParameters)
             // Reenable the UART interrupt.
             //
             xSemaphoreGive(mut);
+#ifdef USB_CONN
             MAP_UARTIntEnable(UART0_BASE, UART_INT_TX);
+#else
+            MAP_UARTIntEnable(UART1_BASE, UART_INT_TX);
+#endif
 
         }
 
