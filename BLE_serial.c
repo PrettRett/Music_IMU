@@ -30,10 +30,10 @@ void BLE_serialTask(void *pvParameters)
             while(uxQueueMessagesWaiting(xRxedChars1))
 #endif
             {
-#ifdef USB_CONN
                 xQueueReceive(xRxedChars1,&str,portMAX_DELAY);
-#endif
+#ifdef USB_CONN
                 xQueueSend(xCharsForTx0,&str,portMAX_DELAY);
+#endif
 
                 if(str==comm[0][com_count1])
                 {
