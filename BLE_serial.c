@@ -57,6 +57,7 @@ void BLE_serialTask(void *pvParameters)
             // Disable the UART interrupt.  If we don't do this there is a race
             // condition which can cause the read index to be corrupted.
             //
+#ifdef USB_CONN
             UARTIntDisable(UART1_BASE, UART_INT_TX);
 
             //
@@ -74,6 +75,7 @@ void BLE_serialTask(void *pvParameters)
             // Reenable the UART interrupt.
             //
             MAP_UARTIntEnable(UART1_BASE, UART_INT_TX);
+#endif
         }
 #ifdef USB_CONN
         if((aux & USB_FLAG)==USB_FLAG)
@@ -247,7 +249,7 @@ void BLE_serialTask(void *pvParameters)
                         }
                     }
                 }
-
+#ifdef USB_CONN
                 if(send_uart&&UARTSpaceAvail(UART0_BASE))
                 {
                     UARTCharPutNonBlocking(UART0_BASE,*dataToSend);
@@ -263,6 +265,24 @@ void BLE_serialTask(void *pvParameters)
                         //avisamos cuando no se ha conseguido enviar
                     }
                 }
+#else
+                if(send_uart&&UARTSpaceAvail(UART1_BASE))
+                {
+                    UARTCharPutNonBlocking(UART1_BASE,*dataToSend);
+                }
+                else
+                {
+                    send_uart=0;
+                    BaseType_t xResult=xQueueSend(xCharsForTx1,dataToSend,configTICK_RATE_HZ*0.01);
+                    //codigo extra para cuando se pierdan datos
+                    if(xResult==errQUEUE_FULL)
+                    {
+                        i=48;
+                        xEventGroupSetBits(Signals,NSENT_FLAG);
+                        //avisamos cuando no se ha conseguido enviar
+                    }
+                }
+#endif
                 i++;
 
             }
