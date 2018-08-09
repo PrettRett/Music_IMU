@@ -331,7 +331,7 @@ void UARTBLEinit()
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART1);   //La UART tiene que seguir funcionando aunque el micro esta dormido
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOB);
     UARTClockSourceSet(UART1_BASE,UART_CLOCK_SYSTEM);
-    UARTConfigSetExpClk(UART1_BASE,SysCtlClockGet(),9600,
+    UARTConfigSetExpClk(UART1_BASE,SysCtlClockGet(),115200,
                        UART_CONFIG_WLEN_8|UART_CONFIG_STOP_ONE|
                        UART_CONFIG_PAR_NONE);
 
