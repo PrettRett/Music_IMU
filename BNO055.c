@@ -192,6 +192,7 @@ void BNO_COMM(void *pvParameters)
                     g_CurrState=BNO_READ;
                     TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet()-1);//cargamos una cuenta de 1 segundo
                     TimerEnable(TIMER0_BASE, TIMER_A);
+                    GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x00);
                 }
                 else if(aux&CALIB_FLAG)
                     g_CurrState=BNO_CALIB;
@@ -272,11 +273,11 @@ void BNO_COMM(void *pvParameters)
                 do{
                     BNO_ReadRegister(BNO055_CALIB_STAT_ADDR,&reg,1);
                 }
-                while((reg<=0x1F)&&(xEventGroupWaitBits(Signals, CALIB_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)==0));
-                if(reg>=0x1F)
+                while((reg!=0xFF)&&(xEventGroupWaitBits(Signals, CALIB_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)==0));
+                if(reg==0xFF)
                     GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x0E);
                 else
-                    GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x0E);
+                    GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x00);
 
                 break;
 
