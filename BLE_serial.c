@@ -13,15 +13,14 @@
 void BLE_serialTask(void *pvParameters)
 {
     unsigned char str;
-    unsigned char comm[2][6]={"XREAD","XCALI"};
+    unsigned char comm[3][6]={"XREAD","XCALI","XEND"};
     uint8_t com_count1=0;
     uint8_t com_count2=0;
 
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
     while(1)
     {
-        EventBits_t aux=xEventGroupWaitBits(Signals_Comm, BLE_FLAG|USB_FLAG|DATA_SEND_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
-        GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
+        EventBits_t aux=xEventGroupWaitBits(Signals_Comm, BLE_FLAG|USB_FLAG|DATA_SEND_FLAG|TRANS_END_FLAG|CALIB_END_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         if((aux & BLE_FLAG)==BLE_FLAG)
         {
 #ifdef USB_CONN
@@ -58,6 +57,36 @@ void BLE_serialTask(void *pvParameters)
                 else if(com_count2>0)
                     com_count2=0;
 
+            }
+            if(aux & TRANS_END_FLAG)
+            {
+                int i=0;
+                while(UARTSpaceAvail(UART1_BASE)&&i<4)
+                {
+                    UARTCharPutNonBlocking(UART1_BASE,comm[2][i]);
+                    i++;
+                }
+
+                while(i<4)
+                {
+                    BaseType_t xResult=xQueueSend(xCharsForTx1,&comm[2][i],configTICK_RATE_HZ*0.01);
+                    i++;
+                }
+            }
+            if(aux & CALIB_END_FLAG)
+            {
+                int i=0;
+                while(UARTSpaceAvail(UART1_BASE)&&i<5)
+                {
+                    UARTCharPutNonBlocking(UART1_BASE,comm[1][i]);
+                    i++;
+                }
+
+                while(i<5)
+                {
+                    BaseType_t xResult=xQueueSend(xCharsForTx1,&comm[1][i],configTICK_RATE_HZ*0.01);
+                    i++;
+                }
             }
             //
             // Disable the UART interrupt.  If we don't do this there is a race
@@ -289,6 +318,7 @@ void BLE_serialTask(void *pvParameters)
                     {
                         i=48;
                         //avisamos cuando no se ha conseguido enviar
+                        xEventGroupSetBits(Signals_BNO,SENT_FAIL_FLAG);
                     }
                 }
 #endif

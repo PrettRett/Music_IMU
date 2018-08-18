@@ -237,6 +237,7 @@ void BNO_COMM(void *pvParameters)
                 {
                     g_CurrState=BNO_READ;
                     TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet()-1);//cargamos una cuenta de 1 segundo
+                    t_extra=0;
                     TimerEnable(TIMER0_BASE, TIMER_A);
                     GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x00);
                 }
@@ -262,7 +263,16 @@ void BNO_COMM(void *pvParameters)
 
                 // Hacemos ahora la lectura del timer, y reiniciamos la cuenta para saber cuanto
                 // es el tiempo entre que se capturan las lecturas de media.
-                read_time=SysCtlClockGet()-TimerValueGet(TIMER0_BASE, TIMER_A);
+
+                if(xEventGroupWaitBits(Signals_BNO, SENT_FAIL_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0)&SENT_FAIL_FLAG)
+                {
+                    t_extra=t_extra+read_time;
+                }
+                else
+                {
+                    t_extra=0;
+                }
+                read_time=SysCtlClockGet()-TimerValueGet(TIMER0_BASE, TIMER_A)+t_extra;
                 TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet()-1);
 
                 if(BNO_ReadRegister(BNO055_QUATERNION_DATA_W_LSB_ADDR,mean_read+24,20)<0)
@@ -301,7 +311,8 @@ void BNO_COMM(void *pvParameters)
                 }
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals_BNO, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01)&READ_FLAG)
+                EventBits_t event = xEventGroupWaitBits(Signals_BNO, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01);
+                if(event&READ_FLAG)
                 {
                     g_CurrState = BNO_RDY;
                     TimerDisable(TIMER0_BASE, TIMER_A);
