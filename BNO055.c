@@ -7,7 +7,7 @@
 
 #include "BNO055.h"
 
-uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
+int8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
 {
 
     I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
@@ -15,13 +15,13 @@ uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
     I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
 
     if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
-        return -1
+        return -1;
 
     I2CMasterDataPut(I2C0_BASE, dataWriting);
     I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
     if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
-        return -1
-    return 0
+        return -1;
+    return 0;
 }
 
 int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t bytesToRead)
@@ -31,7 +31,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
     I2CMasterDataPut(I2C0_BASE, firstRegToRead);
     I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
     if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
-        return -1
+        return -1;
     while(I2CMasterBusy(I2C0_BASE));
 
     I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdTRUE);
@@ -40,7 +40,7 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
     else
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
     if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
-        return -1
+        return -1;
     while(I2CMasterBusy(I2C0_BASE));
 
     for(count=0;count<(bytesToRead-1);count++)
@@ -124,6 +124,10 @@ void BNO_COMM(void *pvParameters)
                         break;
                     }
                     if(BNO_WriteRegister(BNO055_PWR_MODE_ADDR,POWER_MODE_NORMAL)<0)
+                    {
+                        g_CurrState = ERROR;
+                        break;
+                    }
                 }
                 else
                     g_CurrState = ERROR;

@@ -63,7 +63,7 @@ typedef enum
 I2C_MASTER_STATE  g_CurrState;
 I2C_MASTER_STATE  g_PrevState;
 
-extern EventGroupHandle_t Signals_Comm, Signal_BNO;
+extern EventGroupHandle_t Signals_Comm, Signals_BNO;
 extern SemaphoreHandle_t mut;
 
 
