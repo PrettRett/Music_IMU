@@ -48,7 +48,7 @@
 
 extern uint8_t mode_BNO;
 extern SemaphoreHandle_t mut;
-extern EventGroupHandle_t Signals;
+extern EventGroupHandle_t Signals_Comm, Signal_BNO;
 QueueHandle_t xRxedChars1, xCharsForTx1;
 uint8_t buttonPressed;
 
