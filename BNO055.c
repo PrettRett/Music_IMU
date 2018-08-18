@@ -9,51 +9,45 @@
 
 uint8_t BNO_WriteRegister(uint8_t reg8bits, uint8_t dataWriting)
 {
-    do
-    {
-        do
-        {
-            I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
-            I2CMasterDataPut(I2C0_BASE, reg8bits);
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
-        }
-        while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
 
-        I2CMasterDataPut(I2C0_BASE, dataWriting);
-        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
-    }
-    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
-    return pdTRUE;
+    I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+    I2CMasterDataPut(I2C0_BASE, reg8bits);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_START);
+
+    if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
+        return -1
+
+    I2CMasterDataPut(I2C0_BASE, dataWriting);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_SEND_FINISH);
+    if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
+        return -1
+    return 0
 }
 
 int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t bytesToRead)
 {
     uint8_t count=0;
-    do
-    {
-        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
-        I2CMasterDataPut(I2C0_BASE, firstRegToRead);
-        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
-    }
-    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
+    I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdFALSE);
+    I2CMasterDataPut(I2C0_BASE, firstRegToRead);
+    I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_SEND);
+    if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
+        return -1
     while(I2CMasterBusy(I2C0_BASE));
 
-    do
-    {
-        I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdTRUE);
-        if(bytesToRead>1)
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
-        else
-            I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
-    }
-    while(!((xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)));
+    I2CMasterSlaveAddrSet(I2C0_BASE, BNO_ADDRESS, pdTRUE);
+    if(bytesToRead>1)
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_START);
+    else
+        I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_SINGLE_RECEIVE);
+    if(!((xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1))&(ACK_DATA_FLAG)))
+        return -1
     while(I2CMasterBusy(I2C0_BASE));
 
     for(count=0;count<(bytesToRead-1);count++)
     {
         bytesReadBuff[count]=(0xFF & I2CMasterDataGet(I2C0_BASE));
         I2CMasterControl(I2C0_BASE, I2C_MASTER_CMD_BURST_RECEIVE_CONT);
-        if(xEventGroupWaitBits(Signals, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)&(STOP_FLAG|NACK_FLAG))
+        if(xEventGroupWaitBits(Signals_BNO, NACK_FLAG|STOP_FLAG|ACK_DATA_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)&(STOP_FLAG|NACK_FLAG))
                 return -1;
         while(I2CMasterBusy(I2C0_BASE));
     }
@@ -73,6 +67,14 @@ int8_t BNO_ReadRegister(uint8_t firstRegToRead, uint8_t *bytesReadBuff, uint8_t 
     return count;
 }
 
+void BNO_Reset(void)
+{
+    GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
+    vTaskDelay(configTICK_RATE_HZ*0.1);
+    GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
+    vTaskDelay(configTICK_RATE_HZ*0.65);
+}
+
 void BNO_COMM(void *pvParameters)
 {
     g_CurrState=BNO_INIT;
@@ -87,21 +89,41 @@ void BNO_COMM(void *pvParameters)
                 g_PrevState = g_CurrState;
                 g_CurrState = BNO_CONF;
 
-                vTaskDelay(configTICK_RATE_HZ*0.4);
-                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
-                BNO_ReadRegister(BNO055_CHIP_ID_ADDR,&reg,1);
+                BNO_Reset();
+                if(BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00)<0)
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
+                if(BNO_ReadRegister(BNO055_CHIP_ID_ADDR,&reg,1))
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
                 if(reg==0xA0)
                 {
-                    BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR,0x20);//hacemos un reset al modulo
+                    if(BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR,0x20)<0)//hacemos un reset al modulo
+                    {
+                        g_CurrState = ERROR;
+                        break;
+                    }
                     do
                     {
                         BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
                     }
                     while(reg!=0x00);
-                    BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
+                    if(BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG))
+                    {
+                        g_CurrState = ERROR;
+                        break;
+                    }
                     mode_BNO=OPERATION_MODE_CONFIG;
-                    BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
-                    BNO_WriteRegister(BNO055_PWR_MODE_ADDR,POWER_MODE_NORMAL);
+                    if(BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1)<0)
+                    {
+                        g_CurrState = ERROR;
+                        break;
+                    }
+                    if(BNO_WriteRegister(BNO055_PWR_MODE_ADDR,POWER_MODE_NORMAL)<0)
                 }
                 else
                     g_CurrState = ERROR;
@@ -113,16 +135,28 @@ void BNO_COMM(void *pvParameters)
                 g_PrevState = g_CurrState;
                 g_CurrState = BNO_RDY;
 
-                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
+                if(BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00)<0)
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
                 vTaskDelay(configTICK_RATE_HZ*0.252);
-                BNO_ReadRegister(BNO055_PAGE_ID_ADDR,&reg,1);
+                if(BNO_ReadRegister(BNO055_PAGE_ID_ADDR,&reg,1)<0)
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
                 if(mode_BNO!=OPERATION_MODE_CONFIG)
                 {
                     BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
                     mode_BNO=OPERATION_MODE_CONFIG;
                 }
-                BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR, 0x80);
-                BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1);
+                if(BNO_WriteRegister(BNO055_SYS_TRIGGER_ADDR, 0x80)<0)
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
+                if(BNO_ReadRegister(BNO055_SYS_TRIGGER_ADDR,&reg,1)<0)
                 /*mode_BNO=OPERATION_MODE_AMG;
                 BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_AMG);
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR,&reg,1);
@@ -172,21 +206,33 @@ void BNO_COMM(void *pvParameters)
                     g_CurrState=ERROR;
                 }*/
 
-                BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00);
+                if(BNO_WriteRegister(BNO055_PAGE_ID_ADDR, 0x00)<0)
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
                 vTaskDelay(configTICK_RATE_HZ*0.1);
 
-                BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG);
+                if(BNO_WriteRegister(BNO055_OPR_MODE_ADDR,OPERATION_MODE_CONFIG)<0)
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
                 mode_BNO=OPERATION_MODE_CONFIG;
-                BNO_WriteRegister(BNO055_UNIT_SEL_ADDR, UNIT_PARAM );
-
+                if(BNO_WriteRegister(BNO055_UNIT_SEL_ADDR, UNIT_PARAM )<0)
+                    g_CurrState = ERROR;
             break;
 
 
             case BNO_RDY:
                 g_PrevState = g_CurrState;
                 mode_BNO=OPERATION_MODE_NDOF;
-                BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO);
-                EventBits_t aux=xEventGroupWaitBits(Signals, READ_FLAG|CALIB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+                if(BNO_WriteRegister(BNO055_OPR_MODE_ADDR,mode_BNO)<0)
+                {
+                    g_CurrState = ERROR;
+                    break;
+                }
+                EventBits_t aux=xEventGroupWaitBits(Signals_BNO, READ_FLAG|CALIB_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
                 if(aux&READ_FLAG)
                 {
                     g_CurrState=BNO_READ;
@@ -245,7 +291,7 @@ void BNO_COMM(void *pvParameters)
                 if(s!=pdTRUE)
                     g_CurrState = ERROR;*/
                 xSemaphoreGive(mut);
-                xEventGroupSetBits(Signals,DATA_SEND_FLAG);
+                xEventGroupSetBits(Signals_Comm,DATA_SEND_FLAG);
                 uint8_t prev_mode=mode_BNO;
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR, &mode_BNO,1);
                 if(mode_BNO!=prev_mode || g_CurrState==ERROR)
@@ -255,7 +301,7 @@ void BNO_COMM(void *pvParameters)
                 }
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                if(xEventGroupWaitBits(Signals, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01)&READ_FLAG)
+                if(xEventGroupWaitBits(Signals_BNO, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01)&READ_FLAG)
                 {
                     g_CurrState = BNO_RDY;
                     TimerDisable(TIMER0_BASE, TIMER_A);
@@ -273,7 +319,7 @@ void BNO_COMM(void *pvParameters)
                 do{
                     BNO_ReadRegister(BNO055_CALIB_STAT_ADDR,&reg,1);
                 }
-                while((reg!=0xFF)&&(xEventGroupWaitBits(Signals, CALIB_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)==0));
+                while((reg!=0xFF)&&(xEventGroupWaitBits(Signals_BNO, CALIB_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.1)==0));
                 if(reg==0xFF)
                     GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x0E);
                 else
@@ -336,6 +382,11 @@ void BNO_init()
     IntEnable(INT_TIMER0A);
     // Y habilita, dentro del modulo TIMER0, la interrupcion de particular de "fin de cuenta"
     TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
+
+
+    //--------------------Habilitar el ENABLE del HM-10-------------------
+    GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE,GPIO_PIN_4);
+    GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
 }
 
 
@@ -354,7 +405,7 @@ void BNO_IntHandler()
     else
         I2CMasterInterruptStatus>>=2;
     xResult = xEventGroupSetBitsFromISR(
-                                Signals,   /* The event group being updated. */
+                              Signals_BNO,   /* The event group being updated. */
                               I2CMasterInterruptStatus, /* The bits being set. */
                               &xHigherPriorityTaskWoken );
     if(xResult != pdFAIL)

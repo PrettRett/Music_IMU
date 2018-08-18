@@ -20,7 +20,7 @@ void BLE_serialTask(void *pvParameters)
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
     while(1)
     {
-        EventBits_t aux=xEventGroupWaitBits(Signals, BLE_FLAG|USB_FLAG|DATA_SEND_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
+        EventBits_t aux=xEventGroupWaitBits(Signals_Comm, BLE_FLAG|USB_FLAG|DATA_SEND_FLAG, pdTRUE, pdFALSE, portMAX_DELAY);
         GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
         if((aux & BLE_FLAG)==BLE_FLAG)
         {
@@ -40,7 +40,7 @@ void BLE_serialTask(void *pvParameters)
                     com_count1++;
                     if(com_count1==5)
                     {
-                        xEventGroupSetBits(Signals,READ_FLAG);
+                        xEventGroupSetBits(Signals_BNO,READ_FLAG);
                         com_count1=0;
                     }
                 }
@@ -51,7 +51,7 @@ void BLE_serialTask(void *pvParameters)
                     com_count2++;
                     if(com_count2==5)
                     {
-                        xEventGroupSetBits(Signals,CALIB_FLAG);
+                        xEventGroupSetBits(Signals_BNO,CALIB_FLAG);
                         com_count2=0;
                     }
                 }
@@ -316,7 +316,8 @@ void UARTBLEinit()
 {
 
     //Event_groups para avisar a las funciones de los serial
-    Signals=xEventGroupCreate();
+    Signals_Comm=xEventGroupCreate();
+    Signals_BNO=xEventGroupCreate();
 
     xCharsForTx1=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
     xRxedChars1=xQueueCreate(QUEUE_LENGTH, QUEUE_SIZE);
@@ -375,10 +376,6 @@ void UARTBLEinit()
     UARTFIFOEnable(UART1_BASE);
     IntEnable(INT_UART1);
     UARTEnable(UART1_BASE);
-
-    //--------------------Habilitar el ENABLE del HM-10-------------------
-    GPIOPinTypeGPIOOutput(GPIO_PORTB_BASE,GPIO_PIN_4);
-    GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x10);
 
     //boton para señalizar el movimiento
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
@@ -446,7 +443,7 @@ void UART1IntHandler()
             //
             i32Char = MAP_UARTCharGetNonBlocking(UART1_BASE);
             cChar = (unsigned char)(i32Char & 0xFF);
-            xEventGroupSetBitsFromISR(Signals,   /* The event group being updated. */
+            xEventGroupSetBitsFromISR(Signals_Comm,   /* The event group being updated. */
                                       BLE_FLAG, /* The bits being set. */
                                       &xHigherPriorityTaskWoken );
             //
@@ -540,6 +537,6 @@ void UART0IntHandler()
 
 void ButtonStopHandler()
 {
-    buttonPressed=!(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4)>>4);
+    buttonPressed=(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4)>>4);
     GPIOIntClear(GPIO_PORTF_BASE,GPIO_PIN_4);
 }

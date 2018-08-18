@@ -27,7 +27,7 @@
 #include "BLE_serial.h"
 #include "BNO055.h"
 
-EventGroupHandle_t Signals;
+EventGroupHandle_t Signals_Comm, Signals_BNO;
 SemaphoreHandle_t mut;
 uint8_t mode_BNO;
 
