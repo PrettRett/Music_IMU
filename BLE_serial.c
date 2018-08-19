@@ -13,7 +13,7 @@
 void BLE_serialTask(void *pvParameters)
 {
     unsigned char str;
-    unsigned char comm[3][6]={"XREAD","XCALI","XEND"};
+    unsigned char comm[3][6]={"XREAD","XCALI","XEND\r"};
     uint8_t com_count1=0;
     uint8_t com_count2=0;
 
@@ -58,36 +58,6 @@ void BLE_serialTask(void *pvParameters)
                     com_count2=0;
 
             }
-            if(aux & TRANS_END_FLAG)
-            {
-                int i=0;
-                while(UARTSpaceAvail(UART1_BASE)&&i<4)
-                {
-                    UARTCharPutNonBlocking(UART1_BASE,comm[2][i]);
-                    i++;
-                }
-
-                while(i<4)
-                {
-                    BaseType_t xResult=xQueueSend(xCharsForTx1,&comm[2][i],configTICK_RATE_HZ*0.01);
-                    i++;
-                }
-            }
-            if(aux & CALIB_END_FLAG)
-            {
-                int i=0;
-                while(UARTSpaceAvail(UART1_BASE)&&i<5)
-                {
-                    UARTCharPutNonBlocking(UART1_BASE,comm[1][i]);
-                    i++;
-                }
-
-                while(i<5)
-                {
-                    BaseType_t xResult=xQueueSend(xCharsForTx1,&comm[1][i],configTICK_RATE_HZ*0.01);
-                    i++;
-                }
-            }
             //
             // Disable the UART interrupt.  If we don't do this there is a race
             // condition which can cause the read index to be corrupted.
@@ -111,6 +81,40 @@ void BLE_serialTask(void *pvParameters)
             //
             MAP_UARTIntEnable(UART1_BASE, UART_INT_TX);
 #endif
+        }
+        if(aux & TRANS_END_FLAG)
+        {
+            int i=0;
+            uint8_t *aux;
+            if(xQueuePeek(xCharsForTx1, aux, configTICK_RATE_HZ*0)==pdFALSE)
+                while(UARTSpaceAvail(UART1_BASE)&&(i<5))
+                {
+                    UARTCharPutNonBlocking(UART1_BASE,comm[2][i]);
+                    i++;
+                }
+
+            while(i<5)
+            {
+                BaseType_t xResult=xQueueSend(xCharsForTx1,&comm[2][i],configTICK_RATE_HZ*0.01);
+                i++;
+            }
+        }
+        if(aux & CALIB_END_FLAG)
+        {
+            UARTIntDisable(UART1_BASE, UART_INT_TX);
+            int i=0;
+            while(UARTSpaceAvail(UART1_BASE)&&(i<5))
+            {
+                UARTCharPutNonBlocking(UART1_BASE,comm[1][i]);
+                i++;
+            }
+
+            while(i<5)
+            {
+                BaseType_t xResult=xQueueSend(xCharsForTx1,&comm[1][i],configTICK_RATE_HZ*0.01);
+                i++;
+            }
+            UARTIntEnable(UART1_BASE, UART_INT_TX);
         }
 #ifdef USB_CONN
         if((aux & USB_FLAG)==USB_FLAG)
@@ -312,6 +316,7 @@ void BLE_serialTask(void *pvParameters)
                 else
                 {
                     send_uart=0;
+                    UARTIntEnable(UART1_BASE, UART_INT_TX);
                     BaseType_t xResult=xQueueSend(xCharsForTx1,dataToSend,configTICK_RATE_HZ*0.01);
                     //codigo extra para cuando se pierdan datos
                     if(xResult==errQUEUE_FULL)

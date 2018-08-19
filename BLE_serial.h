@@ -36,9 +36,6 @@
 
 //funcion de freeRTOS
 #define BLE_FLAG 0x01
-#define DATA_SEND_FLAG 0X04
-#define TRANS_END_FLAG 0X08
-#define CALIB_END_FLAG 0X10
 #ifdef USB_CONN
     #define USB_FLAG 0x02
     QueueHandle_t xRxedChars0, xCharsForTx0;

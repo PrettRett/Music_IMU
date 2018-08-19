@@ -310,6 +310,7 @@ void BNO_COMM(void *pvParameters)
                 BNO_ReadRegister(BNO055_OPR_MODE_ADDR, &mode_BNO,1);
                 if(mode_BNO!=prev_mode || g_CurrState==ERROR)
                 {
+                    xEventGroupSetBits(Signals_Comm,TRANS_END_FLAG);
                     g_CurrState=ERROR;
                     break;
                 }
@@ -318,6 +319,7 @@ void BNO_COMM(void *pvParameters)
                 EventBits_t event = xEventGroupWaitBits(Signals_BNO, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01);
                 if(event&READ_FLAG)
                 {
+                    xEventGroupSetBits(Signals_Comm,TRANS_END_FLAG);
                     g_CurrState = BNO_RDY;
                     TimerDisable(TIMER0_BASE, TIMER_A);
                 }
@@ -339,6 +341,7 @@ void BNO_COMM(void *pvParameters)
                     GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x0E);
                 else
                     GPIOPinWrite(GPIO_PORTF_BASE,GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3,0x00);
+                xEventGroupSetBits(Signals_Comm,CALIB_END_FLAG);
 
                 break;
 
