@@ -13,9 +13,10 @@
 void BLE_serialTask(void *pvParameters)
 {
     unsigned char str;
-    unsigned char comm[3][6]={"XREAD","XCALI","XEND\r"};
+    unsigned char comm[3][6]={"START","CALIB","ENDR"};
     uint8_t com_count1=0;
     uint8_t com_count2=0;
+    uint8_t com_count3=0;
 
     GPIOPinWrite(GPIO_PORTB_BASE,GPIO_PIN_4,0x00);
     while(1)
@@ -56,6 +57,17 @@ void BLE_serialTask(void *pvParameters)
                 }
                 else if(com_count2>0)
                     com_count2=0;
+                if(str==comm[2][com_count3])
+                {
+                    com_count3++;
+                    if(com_count3==3)
+                    {
+                        xEventGroupSetBits(Signals_BNO,END_FLAG);
+                        com_count3=0;
+                    }
+                }
+                else if(com_count3>0)
+                    com_count3=0;
 
             }
             //

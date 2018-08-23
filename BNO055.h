@@ -39,7 +39,8 @@
 #define STOP_FLAG 0x02
 #define ACK_DATA_FLAG 0x04
 #define READ_FLAG 0X08
-#define CALIB_FLAG 0X10
+#define END_FLAG 0X10
+#define CALIB_FLAG 0X20
 #define SENT_FAIL_FLAG 0X40
 
 #define DATA_SEND_FLAG 0X40

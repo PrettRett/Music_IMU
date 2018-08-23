@@ -316,7 +316,7 @@ void BNO_COMM(void *pvParameters)
                 }
 
                 /* Código para parar la lectura y pasar a modo RDY */
-                EventBits_t event = xEventGroupWaitBits(Signals_BNO, READ_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01);
+                EventBits_t event = xEventGroupWaitBits(Signals_BNO, END_FLAG, pdTRUE, pdFALSE, configTICK_RATE_HZ*0.01);
                 if(event&READ_FLAG)
                 {
                     xEventGroupSetBits(Signals_Comm,TRANS_END_FLAG);
